@@ -1,0 +1,144 @@
+import { ChevronLeft, Unlock, Lock } from "lucide-react";
+
+const StatusBar = () => (
+  <div className="flex items-center justify-between px-6 pt-3 pb-1" style={{ color: "#7A8A7B", fontSize: 12, fontWeight: 500 }}>
+    <span>9:41</span>
+    <div className="flex items-center gap-[5px]">
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><rect x="0" y="4" width="3" height="7" rx="0.8" opacity="0.4" /><rect x="4.5" y="3" width="3" height="8" rx="0.8" opacity="0.6" /><rect x="9" y="1" width="3" height="10" rx="0.8" opacity="0.8" /><rect x="13.5" y="0" width="2.5" height="11" rx="0.8" /></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><path d="M7.5 2.5 C4.5 2.5 1.8 3.8 0 5.9 L1.5 7.4 C2.9 5.7 5.1 4.6 7.5 4.6 C9.9 4.6 12.1 5.7 13.5 7.4 L15 5.9 C13.2 3.8 10.5 2.5 7.5 2.5Z" /><path d="M7.5 6.5 C6 6.5 4.6 7.1 3.6 8.1 L5.1 9.6 C5.7 9 6.5 8.6 7.5 8.6 C8.5 8.6 9.3 9 9.9 9.6 L11.4 8.1 C10.4 7.1 9 6.5 7.5 6.5Z" /><circle cx="7.5" cy="11" r="1.4" /></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="currentColor" strokeOpacity="0.35" /><rect x="2" y="2" width="16" height="8" rx="2" fill="currentColor" /><path d="M23 4.5 C24 5 24 7 23 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+    </div>
+  </div>
+);
+
+const partners = [
+  { id: 1, name: "Verde Brasil", icon: "🥗", level: 1, unlocked: true },
+  { id: 2, name: "Café do Bem", icon: "☕", level: 2, unlocked: true },
+  { id: 3, name: "Raízes", icon: "🌾", level: 3, unlocked: true },
+  { id: 4, name: "Horta & Mesa", icon: "🥕", level: 4, unlocked: false },
+  { id: 5, name: "Natural Fit", icon: "🥑", level: 5, unlocked: false },
+];
+
+export function BenefitsScreen({ onBack, onOpenCard }: { onBack: () => void; onOpenCard: () => void }) {
+  return (
+    <div className="flex flex-col h-full bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <StatusBar />
+
+      <div className="flex-1 overflow-y-auto">
+        {/* Header with back button */}
+        <div className="px-6 pt-4 pb-4 flex items-center gap-4">
+          <button
+            onClick={onBack}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            aria-label="Voltar"
+          >
+            <ChevronLeft size={24} color="#2D3A2E" />
+          </button>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", margin: 0 }}>
+            Meus Benefícios
+          </h1>
+        </div>
+
+        {/* Digital Card button */}
+        <div className="px-6 pb-6">
+          <button
+            onClick={onOpenCard}
+            style={{
+              width: "100%",
+              padding: "16px",
+              background: "linear-gradient(135deg, #D68C70 0%, #C4785A 100%)",
+              border: "none",
+              borderRadius: 16,
+              color: "#FDFBF7",
+              fontSize: 16,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+              boxShadow: "0 8px 24px rgba(214,140,112,0.3)",
+            }}
+          >
+            📱 Abrir Carteirinha Digital
+          </button>
+        </div>
+
+        {/* Partners section */}
+        <div className="px-6 pb-6">
+          <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 18, color: "#2D3A2E", marginBottom: 12 }}>
+            Restaurantes Parceiros
+          </h2>
+          <p style={{ fontSize: 12, color: "#7A8A7B", marginBottom: 16 }}>
+            Desbloqueados: 3 de 5 • Nível atual: 3
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
+            {partners.map((partner) => (
+              <div
+                key={partner.id}
+                style={{
+                  background: partner.unlocked ? "#FDFBF7" : "#F5EFE3",
+                  border: `1px solid ${partner.unlocked ? "#D68C70" : "rgba(45,58,46,0.08)"}`,
+                  borderRadius: 16,
+                  padding: "14px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  opacity: partner.unlocked ? 1 : 0.6,
+                }}
+              >
+                <div style={{ fontSize: 28 }}>{partner.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#2D3A2E" }}>
+                    {partner.name}
+                  </p>
+                  <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#7A8A7B" }}>
+                    Nível {partner.level} • {partner.unlocked ? "Desbloqueado" : "Desbloqueie com mais pontos"}
+                  </p>
+                </div>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: partner.unlocked ? "rgba(214,140,112,0.1)" : "rgba(45,58,46,0.08)",
+                }}>
+                  {partner.unlocked ? (
+                    <Unlock size={16} color="#D68C70" />
+                  ) : (
+                    <Lock size={16} color="#7A8A7B" />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Progress info */}
+        <div className="px-6 pb-6">
+          <div style={{
+            background: "linear-gradient(135deg, rgba(214,140,112,0.1), rgba(45,58,46,0.05))",
+            border: "1px solid rgba(214,140,112,0.2)",
+            borderRadius: 16,
+            padding: "16px 14px",
+          }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#2D3A2E", marginBottom: 8 }}>
+              Próxima meta 🎯
+            </p>
+            <p style={{ margin: 0, fontSize: 14, color: "#7A8A7B", lineHeight: 1.5 }}>
+              Acumule 2 pontos para desbloquear "Horta & Mesa" e aproveite 15% de desconto em refeições veganas!
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

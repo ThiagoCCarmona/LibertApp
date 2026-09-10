@@ -1,0 +1,276 @@
+import { useState } from "react";
+import { ChevronLeft } from "lucide-react";
+
+const StatusBar = () => (
+  <div className="flex items-center justify-between px-6 pt-3 pb-1" style={{ color: "#7A8A7B", fontSize: 12, fontWeight: 500 }}>
+    <span>9:41</span>
+    <div className="flex items-center gap-[5px]">
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><rect x="0" y="4" width="3" height="7" rx="0.8" opacity="0.4" /><rect x="4.5" y="3" width="3" height="8" rx="0.8" opacity="0.6" /><rect x="9" y="1" width="3" height="10" rx="0.8" opacity="0.8" /><rect x="13.5" y="0" width="2.5" height="11" rx="0.8" /></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><path d="M7.5 2.5 C4.5 2.5 1.8 3.8 0 5.9 L1.5 7.4 C2.9 5.7 5.1 4.6 7.5 4.6 C9.9 4.6 12.1 5.7 13.5 7.4 L15 5.9 C13.2 3.8 10.5 2.5 7.5 2.5Z" /><path d="M7.5 6.5 C6 6.5 4.6 7.1 3.6 8.1 L5.1 9.6 C5.7 9 6.5 8.6 7.5 8.6 C8.5 8.6 9.3 9 9.9 9.6 L11.4 8.1 C10.4 7.1 9 6.5 7.5 6.5Z" /><circle cx="7.5" cy="11" r="1.4" /></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="currentColor" strokeOpacity="0.35" /><rect x="2" y="2" width="16" height="8" rx="2" fill="currentColor" /><path d="M23 4.5 C24 5 24 7 23 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+    </div>
+  </div>
+);
+
+export function EditProfileScreen({ onBack }: { onBack: () => void }) {
+  const [formData, setFormData] = useState({
+    fullName: "Silvia Mendes",
+    email: "silvia.mendes@email.com",
+    phone: "(11) 98765-4321",
+    cpf: "123.456.789-00",
+    location: "São Paulo, SP",
+  });
+
+  const [saved, setSaved] = useState(false);
+
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const formatPhone = (value: string) => {
+    const cleaned = value.replace(/\D/g, "");
+    if (cleaned.length <= 11) {
+      return cleaned
+        .replace(/(\d{0,2})(\d{0,5})(\d{0,4})/, (match, p1, p2, p3) => {
+          if (p3) return `(${p1}) ${p2}-${p3}`;
+          if (p2) return `(${p1}) ${p2}`;
+          if (p1) return `(${p1}`;
+          return match;
+        });
+    }
+    return value;
+  };
+
+  const formatCPF = (value: string) => {
+    const cleaned = value.replace(/\D/g, "");
+    if (cleaned.length <= 11) {
+      return cleaned
+        .replace(/(\d{0,3})(\d{0,3})(\d{0,3})(\d{0,2})/, (match, p1, p2, p3, p4) => {
+          if (p4) return `${p1}.${p2}.${p3}-${p4}`;
+          if (p3) return `${p1}.${p2}.${p3}`;
+          if (p2) return `${p1}.${p2}`;
+          if (p1) return `${p1}`;
+          return match;
+        });
+    }
+    return value;
+  };
+
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <StatusBar />
+
+      <div className="flex-1 overflow-y-auto">
+        {/* Header with back button */}
+        <div className="px-6 pt-4 pb-4 flex items-center gap-4">
+          <button
+            onClick={onBack}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            aria-label="Voltar"
+          >
+            <ChevronLeft size={24} color="#2D3A2E" />
+          </button>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", margin: 0 }}>
+            Editar Perfil
+          </h1>
+        </div>
+
+        {/* Avatar section */}
+        <div className="px-6 pb-6 flex flex-col items-center">
+          <div
+            style={{
+              width: 100,
+              height: 100,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #D68C70, #C4785A)",
+              overflow: "hidden",
+              border: "4px solid #D68C70",
+              marginBottom: 12,
+              cursor: "pointer",
+              position: "relative",
+            }}
+          >
+            <img
+              src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"
+              alt="Avatar"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          </div>
+          <button
+            style={{
+              background: "#F5EFE3",
+              border: "1px solid #D68C70",
+              borderRadius: 8,
+              padding: "8px 16px",
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#D68C70",
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            Alterar Foto
+          </button>
+        </div>
+
+        {/* Form fields */}
+        <div className="px-6 pb-6 space-y-4">
+          {/* Full Name */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
+              Nome Completo
+            </label>
+            <input
+              type="text"
+              value={formData.fullName}
+              onChange={(e) => handleChange("fullName", e.target.value)}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                border: "1px solid rgba(45,58,46,0.12)",
+                borderRadius: 12,
+                background: "#F5EFE3",
+                fontSize: 14,
+                fontFamily: "'DM Sans', sans-serif",
+                boxSizing: "border-box",
+              }}
+              placeholder="Nome completo"
+            />
+          </div>
+
+          {/* Email */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
+              E-mail
+            </label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleChange("email", e.target.value)}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                border: "1px solid rgba(45,58,46,0.12)",
+                borderRadius: 12,
+                background: "#F5EFE3",
+                fontSize: 14,
+                fontFamily: "'DM Sans', sans-serif",
+                boxSizing: "border-box",
+              }}
+              placeholder="E-mail"
+            />
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
+              Telefone
+            </label>
+            <input
+              type="text"
+              value={formData.phone}
+              onChange={(e) => handleChange("phone", formatPhone(e.target.value))}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                border: "1px solid rgba(45,58,46,0.12)",
+                borderRadius: 12,
+                background: "#F5EFE3",
+                fontSize: 14,
+                fontFamily: "'DM Sans', sans-serif",
+                boxSizing: "border-box",
+              }}
+              placeholder="(XX) XXXXX-XXXX"
+            />
+          </div>
+
+          {/* CPF */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
+              CPF
+            </label>
+            <input
+              type="text"
+              value={formData.cpf}
+              onChange={(e) => handleChange("cpf", formatCPF(e.target.value))}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                border: "1px solid rgba(45,58,46,0.12)",
+                borderRadius: 12,
+                background: "#F5EFE3",
+                fontSize: 14,
+                fontFamily: "'DM Sans', sans-serif",
+                boxSizing: "border-box",
+              }}
+              placeholder="XXX.XXX.XXX-XX"
+            />
+          </div>
+
+          {/* Location */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
+              Localização Padrão
+            </label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) => handleChange("location", e.target.value)}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                border: "1px solid rgba(45,58,46,0.12)",
+                borderRadius: 12,
+                background: "#F5EFE3",
+                fontSize: 14,
+                fontFamily: "'DM Sans', sans-serif",
+                boxSizing: "border-box",
+              }}
+              placeholder="Cidade, Estado"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Save button */}
+      <div className="px-6 pb-6">
+        <button
+          onClick={handleSave}
+          style={{
+            width: "100%",
+            padding: "14px",
+            background: saved
+              ? "linear-gradient(135deg, #2D3A2E 0%, #3D5040 100%)"
+              : "linear-gradient(135deg, #D68C70 0%, #C4785A 100%)",
+            border: "none",
+            borderRadius: 12,
+            color: "#FDFBF7",
+            fontSize: 16,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontFamily: "'DM Sans', sans-serif",
+            transition: "all 0.3s",
+            boxShadow: saved
+              ? "0 8px 24px rgba(45,58,46,0.25)"
+              : "0 8px 24px rgba(214,140,112,0.3)",
+          }}
+        >
+          {saved ? "✓ Salvo com sucesso!" : "Salvar Alterações"}
+        </button>
+      </div>
+    </div>
+  );
+}
