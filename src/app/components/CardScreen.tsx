@@ -1,16 +1,5 @@
 import { ChevronLeft } from "lucide-react";
 
-const StatusBar = () => (
-  <div className="flex items-center justify-between px-6 pt-3 pb-1" style={{ color: "#7A8A7B", fontSize: 12, fontWeight: 500 }}>
-    <span>9:41</span>
-    <div className="flex items-center gap-[5px]">
-      <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><rect x="0" y="4" width="3" height="7" rx="0.8" opacity="0.4" /><rect x="4.5" y="3" width="3" height="8" rx="0.8" opacity="0.6" /><rect x="9" y="1" width="3" height="10" rx="0.8" opacity="0.8" /><rect x="13.5" y="0" width="2.5" height="11" rx="0.8" /></svg>
-      <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><path d="M7.5 2.5 C4.5 2.5 1.8 3.8 0 5.9 L1.5 7.4 C2.9 5.7 5.1 4.6 7.5 4.6 C9.9 4.6 12.1 5.7 13.5 7.4 L15 5.9 C13.2 3.8 10.5 2.5 7.5 2.5Z" /><path d="M7.5 6.5 C6 6.5 4.6 7.1 3.6 8.1 L5.1 9.6 C5.7 9 6.5 8.6 7.5 8.6 C8.5 8.6 9.3 9 9.9 9.6 L11.4 8.1 C10.4 7.1 9 6.5 7.5 6.5Z" /><circle cx="7.5" cy="11" r="1.4" /></svg>
-      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="currentColor" strokeOpacity="0.35" /><rect x="2" y="2" width="16" height="8" rx="2" fill="currentColor" /><path d="M23 4.5 C24 5 24 7 23 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-    </div>
-  </div>
-);
-
 // Simple QR Code SVG - stylized representation
 const StylizedQRCode = () => (
   <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
@@ -68,38 +57,35 @@ const StylizedBarcode = () => (
 export function CardScreen({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-col h-full bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <StatusBar />
-
-      <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center">
-        {/* Back button */}
-        <div style={{ position: "absolute", top: 50, left: 20 }}>
-          <button
-            onClick={onBack}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            aria-label="Voltar"
-          >
-            <ChevronLeft size={24} color="#2D3A2E" />
-          </button>
-        </div>
-
-        {/* Header text */}
+      {/* Header with back button */}
+      <div className="px-6 pt-4 pb-2 flex items-center gap-4">
+        <button
+          onClick={onBack}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          aria-label="Voltar"
+        >
+          <ChevronLeft size={24} color="#2D3A2E" />
+        </button>
         <h1 style={{
           fontFamily: "'Fraunces', serif",
           fontWeight: 500,
           fontSize: 20,
           color: "#2D3A2E",
-          marginBottom: 24,
+          margin: 0,
         }}>
           Carteirinha Digital
         </h1>
+      </div>
+
+      <div className="flex-1 overflow-y-auto flex flex-col items-center justify-start py-4">
 
         {/* Main Card */}
         <div

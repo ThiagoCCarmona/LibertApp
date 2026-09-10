@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { libertAppLogo } from "../../assets/logo";
 
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [opacity, setOpacity] = useState(0);
@@ -24,10 +25,9 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         zIndex: 100,
       }}
     >
-      {/* Logo image (uses project asset) */}
-      {/* Use import.meta.url so no extra asset typing is required */}
+      {/* Logo image (embedded high-res asset) */}
       <img
-        src={new URL("../../../telas/icone libertapp.jpeg", import.meta.url).href}
+        src={libertAppLogo}
         alt="LibertApp logo"
         width={180}
         height={180}

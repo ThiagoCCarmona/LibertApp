@@ -1,0 +1,17 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="LibertApp.Mobile.MainPage"
+             BackgroundColor="#FDFBF7"
+             NavigationPage.HasNavigationBar="False"
+             Shell.NavBarIsVisible="False">
+
+    <Grid>
+        <HybridWebView x:Name="hybridWebView"
+                       HybridRoot="wwwroot"
+                       DefaultFile="index.html"
+                       RawMessageReceived="OnHybridMessageReceived"
+                       HorizontalOptions="Fill"
+                       VerticalOptions="Fill" />
+    </Grid>
+
+</ContentPage>

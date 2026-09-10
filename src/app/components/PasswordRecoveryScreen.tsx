@@ -1,14 +1,13 @@
 import { ChevronLeft } from "lucide-react";
 import type { Screen } from "../App";
-
-// StatusBar is rendered centrally in App.tsx to avoid duplication
+import { libertAppLogo } from "../../assets/logo";
 
 const EnvelopeIllustration = () => (
   <img
-    src={new URL("../../../telas/icone libertapp.jpeg", import.meta.url).href}
+    src={libertAppLogo}
     alt="LibertApp logo"
-  width={150}
-  height={150}
+    width={150}
+    height={150}
     style={{ borderRadius: "50%", objectFit: "cover" }}
   />
 );

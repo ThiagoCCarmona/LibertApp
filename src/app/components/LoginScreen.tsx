@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import type { Screen } from "../App";
+import { libertAppLogo } from "../../assets/logo";
 
 const LibertLogo = () => (
   <img
-    src={new URL("../../../telas/icone libertapp.jpeg", import.meta.url).href}
+    src={libertAppLogo}
     alt="LibertApp logo"
-  width={96}
-  height={96}
+    width={96}
+    height={96}
     style={{ objectFit: "contain" }}
   />
 );

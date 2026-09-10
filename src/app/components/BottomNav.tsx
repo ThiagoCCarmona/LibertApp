@@ -14,8 +14,8 @@ export function BottomNav({ activeTab, onTabChange }: { activeTab: Tab; onTabCha
       display: "flex",
       borderTop: "1px solid rgba(45,58,46,0.08)",
       background: "#FDFBF7",
-      paddingBottom: 8,
-      paddingTop: 4,
+      paddingBottom: "calc(10px + env(safe-area-inset-bottom, 0px))",
+      paddingTop: 6,
     }}>
       {tabs.map(tab => {
         const active = activeTab === tab.id;

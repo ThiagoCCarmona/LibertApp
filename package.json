@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "sync:maui": "vite build && powershell -Command \"Copy-Item -Recurse -Force dist/* LibertApp.Mobile/Resources/Raw/wwwroot\""
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
