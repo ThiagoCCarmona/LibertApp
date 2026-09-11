@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Bell, Moon, Smartphone } from "lucide-react";
+import { Bell, Moon, Smartphone, LogOut } from "lucide-react";
 
 const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean; onChange: (val: boolean) => void }) => (
   <button
@@ -353,6 +353,34 @@ export function ProfileScreen({
               Pausas regulares ajudam a reduzir ansiedade e melhorar seu bem-estar digital.
             </p>
           </div>
+
+          {/* Logout Button */}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              style={{
+                width: "100%",
+                marginTop: 20,
+                marginBottom: 20,
+                background: "#FAF7F0",
+                border: "1.5px solid rgba(224, 109, 83, 0.3)",
+                borderRadius: 14,
+                padding: "13px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                cursor: "pointer",
+                color: "#E06D53",
+                fontSize: 13,
+                fontWeight: 600,
+                transition: "all 0.2s ease",
+              }}
+            >
+              <LogOut size={16} />
+              <span>Sair da conta</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

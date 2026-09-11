@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
+import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
 
 const leaderboard = [
   { position: 1, name: "João Silva", points: 2850, avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" },
@@ -17,6 +19,21 @@ const topThree = leaderboard.slice(0, 3);
 const restRanking = leaderboard.slice(3);
 
 export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
+  const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
+
+  const handleOpenProfile = (user: (typeof leaderboard)[0]) => {
+    setSelectedUser({
+      name: user.name,
+      avatar: user.avatar,
+      level: Math.max(1, Math.floor(user.points / 600)),
+      levelName: `Nível ${Math.max(1, Math.floor(user.points / 600))} - Foco Ativo`,
+      points: user.points,
+      streakDays: Math.min(14, Math.floor(user.points / 200)),
+      focusMinutes: Math.floor(user.points * 0.15),
+      bio: "Comprometido(a) com a saúde mental e momentos sem tela durante os estudos.",
+      department: "Membro da Comunidade Carmelita",
+    });
+  };
   return (
     <div className="flex flex-col h-full bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div className="flex-1 overflow-y-auto flex flex-col">
@@ -52,7 +69,10 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             justifyItems: "center",
           }}>
             {/* 2nd place - left */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%" }}>
+            <div
+              onClick={() => handleOpenProfile(topThree[1])}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", cursor: "pointer" }}
+            >
               <div
                 style={{
                   width: 60,
@@ -88,7 +108,10 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             </div>
 
             {/* 1st place - center */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", transform: "translateY(0)" }}>
+            <div
+              onClick={() => handleOpenProfile(topThree[0])}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", transform: "translateY(0)", cursor: "pointer" }}
+            >
               <div
                 style={{
                   width: 72,
@@ -124,7 +147,10 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             </div>
 
             {/* 3rd place - right */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%" }}>
+            <div
+              onClick={() => handleOpenProfile(topThree[2])}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", cursor: "pointer" }}
+            >
               <div
                 style={{
                   width: 60,
@@ -173,6 +199,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
               return (
                 <div
                   key={user.position}
+                  onClick={() => handleOpenProfile(user)}
                   style={{
                     background: isSilvia
                       ? "linear-gradient(135deg, rgba(214,140,112,0.15), rgba(214,140,112,0.05))"
@@ -183,6 +210,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
                     display: "flex",
                     alignItems: "center",
                     gap: 12,
+                    cursor: "pointer",
                   }}
                 >
                   <div
@@ -242,6 +270,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
 
       {/* Silvia footer - fixed */}
       <div
+        onClick={() => handleOpenProfile(leaderboard[3])}
         style={{
           background: "linear-gradient(180deg, transparent, rgba(45,58,46,0.02))",
           borderTop: "1px solid rgba(45,58,46,0.08)",
@@ -249,6 +278,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           display: "flex",
           alignItems: "center",
           gap: 12,
+          cursor: "pointer",
         }}
       >
         <div
@@ -275,6 +305,12 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           </p>
         </div>
       </div>
+
+      <UserProfileModal
+        isOpen={selectedUser !== null}
+        onClose={() => setSelectedUser(null)}
+        user={selectedUser}
+      />
     </div>
   );
 }

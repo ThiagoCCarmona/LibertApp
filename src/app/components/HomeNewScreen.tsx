@@ -1,4 +1,8 @@
-import { Heart, MessageCircle, Share2, Plus, Trophy } from "lucide-react";
+import { useState } from "react";
+import { Heart, MessageCircle, Share2, Plus, Trophy, UserPlus } from "lucide-react";
+import { NewPostModal } from "./NewPostModal";
+import { PostCommentsModal } from "./PostCommentsModal";
+import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
 
 const LibertLogoSmall = () => (
   <svg width="24" height="24" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -9,7 +13,7 @@ const LibertLogoSmall = () => (
   </svg>
 );
 
-const feedPosts = [
+const INITIAL_FEED_POSTS = [
   {
     id: 1,
     type: "memory",
@@ -56,10 +60,85 @@ const feedPosts = [
   },
 ];
 
-export function HomeNewScreen({ onShowLeaderboard }: { onShowLeaderboard?: () => void }) {
+export function HomeNewScreen({
+  onShowLeaderboard,
+  onSearchUsers,
+}: {
+  onShowLeaderboard?: () => void;
+  onSearchUsers?: () => void;
+}) {
+  const [posts, setPosts] = useState(INITIAL_FEED_POSTS);
+  const [isNewPostOpen, setIsNewPostOpen] = useState(false);
+  const [activeCommentsPost, setActiveCommentsPost] = useState<(typeof INITIAL_FEED_POSTS)[0] | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
+
   const unlockedCount = 3;
   const totalCount = 5;
   const progress = (unlockedCount / totalCount) * 100;
+
+  const handleToggleLike = (postId: number) => {
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id === postId) {
+          const newLiked = !p.liked;
+          return {
+            ...p,
+            liked: newLiked,
+            likes: newLiked ? p.likes + 1 : p.likes - 1,
+          };
+        }
+        return p;
+      })
+    );
+  };
+
+  const handlePublishPost = (newPostData: {
+    content: string;
+    category: string;
+    icon: string;
+    image?: string;
+  }) => {
+    const bgColors: Record<string, { bg: string; border: string }> = {
+      nature: { bg: "#E8D7C8", border: "#D7C4B3" },
+      memory: { bg: "#FCE4EC", border: "#F8BBD0" },
+      games: { bg: "#FFEBEE", border: "#FFCDD2" },
+      reading: { bg: "#E8F5E9", border: "#C8E6C9" },
+    };
+
+    const scheme = bgColors[newPostData.category] || { bg: "#F5EFE3", border: "#EDE7DA" };
+
+    const createdPost = {
+      id: Date.now(),
+      type: newPostData.category,
+      author: "Silvia Mendes",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+      time: "Agora",
+      content: newPostData.content,
+      image: newPostData.image,
+      bgColor: scheme.bg,
+      borderColor: scheme.border,
+      likes: 0,
+      comments: 0,
+      liked: false,
+      icon: newPostData.icon,
+    };
+
+    setPosts([createdPost, ...posts]);
+  };
+
+  const handleOpenUserProfile = (author: string, avatar: string) => {
+    setSelectedUser({
+      name: author,
+      avatar: avatar,
+      level: 3,
+      levelName: "Nível 3 - Foco Consciente",
+      points: 2450,
+      streakDays: 7,
+      focusMinutes: 180,
+      bio: "Adoro caminhar sem fones e praticar momentos de presença plena durante a semana.",
+      department: "Membro da Comunidade Carmelita",
+    });
+  };
 
   return (
     <div className="flex flex-col h-full bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -73,24 +152,47 @@ export function HomeNewScreen({ onShowLeaderboard }: { onShowLeaderboard?: () =>
               Silvia 👋
             </h1>
           </div>
-          <button
-            onClick={onShowLeaderboard}
-            style={{
-              background: "linear-gradient(135deg, #D68C70, #C4785A)",
-              border: "none",
-              borderRadius: 12,
-              width: 44,
-              height: 44,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              boxShadow: "0 4px 12px rgba(214,140,112,0.3)",
-            }}
-            title="Ver Pódio"
-          >
-            <Trophy size={22} color="#FDFBF7" strokeWidth={2} />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              onClick={onSearchUsers}
+              style={{
+                background: "#F5EFE3",
+                border: "1px solid rgba(45,58,46,0.08)",
+                borderRadius: 12,
+                width: 44,
+                height: 44,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(45,58,46,0.06)",
+              }}
+              title="Buscar Colegas para Seguir"
+              aria-label="Buscar Colegas"
+            >
+              <UserPlus size={20} color="#2D3A2E" strokeWidth={2} />
+            </button>
+
+            <button
+              onClick={onShowLeaderboard}
+              style={{
+                background: "linear-gradient(135deg, #D68C70, #C4785A)",
+                border: "none",
+                borderRadius: 12,
+                width: 44,
+                height: 44,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(214,140,112,0.3)",
+              }}
+              title="Ver Pódio"
+              aria-label="Ver Pódio"
+            >
+              <Trophy size={22} color="#FDFBF7" strokeWidth={2} />
+            </button>
+          </div>
         </div>
 
         {/* Carteirinha Digital Card */}
@@ -175,7 +277,7 @@ export function HomeNewScreen({ onShowLeaderboard }: { onShowLeaderboard?: () =>
 
         {/* Feed Posts */}
         <div className="px-5 pb-24" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {feedPosts.map(post => (
+          {posts.map(post => (
             <div
               key={post.id}
               style={{
@@ -185,7 +287,10 @@ export function HomeNewScreen({ onShowLeaderboard }: { onShowLeaderboard?: () =>
                 border: `1.5px solid ${post.borderColor}`,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <div
+                onClick={() => handleOpenUserProfile(post.author, post.avatar)}
+                style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer" }}
+              >
                 <div
                   style={{
                     width: 40,
@@ -225,6 +330,7 @@ export function HomeNewScreen({ onShowLeaderboard }: { onShowLeaderboard?: () =>
 
               <div style={{ display: "flex", gap: 20, paddingTop: 8, borderTop: `1px solid ${post.borderColor}` }}>
                 <button
+                  onClick={() => handleToggleLike(post.id)}
                   style={{
                     background: "none",
                     border: "none",
@@ -240,6 +346,7 @@ export function HomeNewScreen({ onShowLeaderboard }: { onShowLeaderboard?: () =>
                   </span>
                 </button>
                 <button
+                  onClick={() => setActiveCommentsPost(post)}
                   style={{
                     background: "none",
                     border: "none",
@@ -253,6 +360,11 @@ export function HomeNewScreen({ onShowLeaderboard }: { onShowLeaderboard?: () =>
                   <span style={{ fontSize: 12, color: "#7A8A7B" }}>{post.comments}</span>
                 </button>
                 <button
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({ title: "LibertApp", text: post.content });
+                    }
+                  }}
                   style={{
                     background: "none",
                     border: "none",
@@ -272,6 +384,7 @@ export function HomeNewScreen({ onShowLeaderboard }: { onShowLeaderboard?: () =>
 
       {/* FAB */}
       <button
+        onClick={() => setIsNewPostOpen(true)}
         style={{
           position: "fixed",
           bottom: 80,
@@ -286,11 +399,41 @@ export function HomeNewScreen({ onShowLeaderboard }: { onShowLeaderboard?: () =>
           alignItems: "center",
           justifyContent: "center",
           boxShadow: "0 8px 24px rgba(214,140,112,0.4), 0 2px 8px rgba(45,58,46,0.12)",
+          zIndex: 40,
         }}
         aria-label="Criar novo post"
       >
         <Plus size={28} color="#FDFBF7" strokeWidth={2.5} />
       </button>
+
+      {/* Modais */}
+      <NewPostModal
+        isOpen={isNewPostOpen}
+        onClose={() => setIsNewPostOpen(false)}
+        onPublish={handlePublishPost}
+      />
+
+      <PostCommentsModal
+        isOpen={activeCommentsPost !== null}
+        onClose={() => setActiveCommentsPost(null)}
+        postAuthor={activeCommentsPost?.author || ""}
+        postContent={activeCommentsPost?.content || ""}
+        onAddComment={() => {
+          if (activeCommentsPost) {
+            setPosts((prev) =>
+              prev.map((p) =>
+                p.id === activeCommentsPost.id ? { ...p, comments: p.comments + 1 } : p
+              )
+            );
+          }
+        }}
+      />
+
+      <UserProfileModal
+        isOpen={selectedUser !== null}
+        onClose={() => setSelectedUser(null)}
+        user={selectedUser}
+      />
     </div>
   );
 }

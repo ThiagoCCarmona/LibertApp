@@ -11,9 +11,10 @@ import { EditProfileScreen } from "./components/EditProfileScreen";
 import { BenefitsScreen } from "./components/BenefitsScreen";
 import { CardScreen } from "./components/CardScreen";
 import { LeaderboardScreen } from "./components/LeaderboardScreen";
+import { SearchUsersScreen } from "./components/SearchUsersScreen";
 
 export type Tab = "home" | "activities" | "profile";
-export type Screen = "splash" | "login" | "signup" | "forgot" | "home" | "main" | "editProfile" | "benefits" | "card" | "leaderboard";
+export type Screen = "splash" | "login" | "signup" | "forgot" | "home" | "main" | "editProfile" | "benefits" | "card" | "leaderboard" | "searchUsers";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("splash");
@@ -82,6 +83,10 @@ export default function App() {
     setCurrentScreen("leaderboard");
   };
 
+  const handleSearchUsers = () => {
+    setCurrentScreen("searchUsers");
+  };
+
   const handleEditProfile = () => {
     setCurrentScreen("editProfile");
   };
@@ -137,7 +142,12 @@ export default function App() {
             {/* Main App Screens */}
             {currentScreen === "main" && (
               <>
-                {activeTab === "home" && <HomeNewScreen onShowLeaderboard={handleShowLeaderboard} />}
+                {activeTab === "home" && (
+                  <HomeNewScreen
+                    onShowLeaderboard={handleShowLeaderboard}
+                    onSearchUsers={handleSearchUsers}
+                  />
+                )}
                 {activeTab === "activities" && <ActivitiesScreen />}
                 {activeTab === "profile" && (
                   <ProfileScreen
@@ -152,6 +162,7 @@ export default function App() {
             {currentScreen === "benefits" && <BenefitsScreen onBack={() => handleBack("main")} onOpenCard={handleOpenCard} />}
             {currentScreen === "card" && <CardScreen onBack={() => handleBack("benefits")} />}
             {currentScreen === "leaderboard" && <LeaderboardScreen onBack={() => handleBack("main")} />}
+            {currentScreen === "searchUsers" && <SearchUsersScreen onBack={() => handleBack("main")} />}
           </div>
           {currentScreen === "main" && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
         </>
