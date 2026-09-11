@@ -1,0 +1,6 @@
+@LibertApp.Api_HostAddress = http://localhost:5290
+
+GET {{LibertApp.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

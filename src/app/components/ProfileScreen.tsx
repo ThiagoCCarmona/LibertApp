@@ -67,11 +67,47 @@ export function ProfileScreen({
   onShowBenefits?: () => void;
   onLogout?: () => void;
 }) {
-  const [currentUser, setCurrentUser] = React.useState<any>(null);
-  const [breathingReminders, setBreathingReminders] = React.useState(true);
-  const [nightMode, setNightMode] = React.useState(false);
-  const [screenTimeLimit, setScreenTimeLimit] = React.useState(true);
-  const [dailyLimit, setDailyLimit] = React.useState(5);
+  const [currentUser, setCurrentUser] = React.useState<any>(() => {
+    try {
+      const stored = localStorage.getItem("currentUser");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [breathingReminders, setBreathingReminders] = React.useState(() => {
+    return localStorage.getItem("pref_breathing") !== "false";
+  });
+  const [nightMode, setNightMode] = React.useState(() => {
+    return localStorage.getItem("pref_nightmode") === "true";
+  });
+  const [screenTimeLimit, setScreenTimeLimit] = React.useState(() => {
+    return localStorage.getItem("pref_screenlimit") !== "false";
+  });
+  const [dailyLimit, setDailyLimit] = React.useState(() => {
+    const v = localStorage.getItem("pref_dailylimit");
+    return v ? parseInt(v, 10) : 5;
+  });
+
+  const handleToggleBreathing = (val: boolean) => {
+    setBreathingReminders(val);
+    localStorage.setItem("pref_breathing", String(val));
+  };
+
+  const handleToggleNightMode = (val: boolean) => {
+    setNightMode(val);
+    localStorage.setItem("pref_nightmode", String(val));
+  };
+
+  const handleToggleScreenLimit = (val: boolean) => {
+    setScreenTimeLimit(val);
+    localStorage.setItem("pref_screenlimit", String(val));
+  };
+
+  const handleChangeDailyLimit = (val: number) => {
+    setDailyLimit(val);
+    localStorage.setItem("pref_dailylimit", String(val));
+  };
 
   React.useEffect(() => {
     let isMounted = true;
@@ -91,9 +127,11 @@ export function ProfileScreen({
     };
   }, []);
 
-  const displayName = currentUser?.nome || "Silvia Mendes";
+  const displayName = currentUser?.nome || "Estudante Carmelita";
   const displayAvatar = currentUser?.fotoUrl || "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=200&h=200&fit=crop&auto=format";
-  const displayEmailOrDate = currentUser?.email || "12/04/1992";
+  const displayEmailOrDate = currentUser?.curso
+    ? `${currentUser.curso} • ${currentUser.email}`
+    : (currentUser?.email || "Membro da Comunidade Carmelita");
 
   return (
     <div className="flex flex-col h-full bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -289,7 +327,7 @@ export function ProfileScreen({
                     <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>A cada 2 horas</p>
                   </div>
                 </div>
-                <ToggleSwitch enabled={breathingReminders} onChange={setBreathingReminders} />
+                <ToggleSwitch enabled={breathingReminders} onChange={handleToggleBreathing} />
               </div>
             </div>
 
@@ -318,7 +356,7 @@ export function ProfileScreen({
                     <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>22h - 7h</p>
                   </div>
                 </div>
-                <ToggleSwitch enabled={nightMode} onChange={setNightMode} />
+                <ToggleSwitch enabled={nightMode} onChange={handleToggleNightMode} />
               </div>
             </div>
 
@@ -347,7 +385,7 @@ export function ProfileScreen({
                     <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>Meta: {dailyLimit}h por dia</p>
                   </div>
                 </div>
-                <ToggleSwitch enabled={screenTimeLimit} onChange={setScreenTimeLimit} />
+                <ToggleSwitch enabled={screenTimeLimit} onChange={handleToggleScreenLimit} />
               </div>
 
               {screenTimeLimit && (
@@ -356,7 +394,7 @@ export function ProfileScreen({
                     <span style={{ fontSize: 11, color: "#7A8A7B" }}>1h</span>
                     <span style={{ fontSize: 11, color: "#7A8A7B" }}>8h</span>
                   </div>
-                  <Slider value={dailyLimit} max={8} onChange={setDailyLimit} />
+                  <Slider value={dailyLimit} max={8} onChange={handleChangeDailyLimit} />
                 </div>
               )}
             </div>

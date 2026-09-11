@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  libertapp-api:
+    build:
+      context: ./LibertApp.Api
+      dockerfile: Dockerfile
+    container_name: libertapp_backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+    volumes:
+      # Persiste o banco SQLite central mesmo ao reiniciar ou recriar containers
+      - libertapp_data:/app/data
+
+volumes:
+  libertapp_data:
+    driver: local

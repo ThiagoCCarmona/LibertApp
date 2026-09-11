@@ -1,41 +1,73 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Trophy, Sparkles } from "lucide-react";
 import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
 import { sendNativeMessage } from "../../services/nativeBridge";
+import { apiService } from "../../services/apiService";
 
-const INITIAL_LEADERBOARD = [
-  { position: 1, name: "João Silva", points: 2850, avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" },
-  { position: 2, name: "Maria Costa", points: 2720, avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop" },
-  { position: 3, name: "Pedro Oliveira", points: 2580, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop" },
-  { position: 4, name: "Silvia Mendes", points: 2450, avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" },
-  { position: 5, name: "Ana Ferreira", points: 2320, avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" },
-  { position: 6, name: "Carlos Mendes", points: 2180, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop" },
-  { position: 7, name: "Beatriz Santos", points: 2050, avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop" },
-  { position: 8, name: "Ricardo Lima", points: 1920, avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" },
-  { position: 9, name: "Fernanda Dias", points: 1780, avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" },
-  { position: 10, name: "Gustavo Santos", points: 1640, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop" },
-];
+export interface RankingUser {
+  id?: number;
+  position: number;
+  name: string;
+  points: number;
+  avatar: string;
+  curso?: string;
+}
 
 export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
-  const [ranking, setRanking] = useState(INITIAL_LEADERBOARD);
+  const [ranking, setRanking] = useState<RankingUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("currentUser");
+      if (stored) setCurrentUser(JSON.parse(stored));
+    } catch {}
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
     async function loadRanking() {
+      setIsLoading(true);
+      try {
+        // 1. Tenta API central na VPS
+        const apiRank = await apiService.getLeaderboard();
+        if (isMounted && apiRank && Array.isArray(apiRank) && apiRank.length > 0) {
+          const mapped: RankingUser[] = apiRank.map((u: any, index: number) => ({
+            id: u.id,
+            position: index + 1,
+            name: u.nome || "Membro",
+            points: u.pontos || 0,
+            avatar: u.fotoUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
+            curso: u.curso,
+          }));
+          setRanking(mapped);
+          setIsLoading(false);
+          return;
+        }
+      } catch (apiErr) {
+        console.warn("API VPS indisponível para ranking, tentando bridge nativa:", apiErr);
+      }
+
+      // 2. Fallback bridge nativa
       try {
         const users = await sendNativeMessage<any[]>("GET_RANKING");
         if (isMounted && users && Array.isArray(users) && users.length > 0) {
-          const mapped = users.map((u, index) => ({
+          const mapped: RankingUser[] = users.map((u, index) => ({
+            id: u.id || u.Id,
             position: index + 1,
             name: u.nome || u.Nome || "Membro",
             points: u.pontos || u.Pontos || 0,
             avatar: u.fotoUrl || u.FotoUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
+            curso: u.curso || u.Curso,
           }));
           setRanking(mapped);
         }
       } catch (err) {
-        console.warn("Erro ao carregar ranking do C#:", err);
+        console.warn("Erro ao carregar ranking nativo:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     }
     loadRanking();
@@ -44,10 +76,12 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
     };
   }, []);
 
-  const topThree = ranking.slice(0, 3);
+  const first = ranking[0];
+  const second = ranking[1];
+  const third = ranking[2];
   const restRanking = ranking.slice(3);
 
-  const handleOpenProfile = (user: (typeof INITIAL_LEADERBOARD)[0]) => {
+  const handleOpenProfile = (user: RankingUser) => {
     setSelectedUser({
       name: user.name,
       avatar: user.avatar,
@@ -56,10 +90,11 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
       points: user.points,
       streakDays: Math.min(14, Math.floor(user.points / 200)),
       focusMinutes: Math.floor(user.points * 0.15),
-      bio: "Comprometido(a) com a saúde mental e momentos sem tela durante os estudos.",
-      department: "Membro da Comunidade Carmelita",
+      bio: user.curso ? `Estudante de ${user.curso}` : "Comprometido(a) com a saúde mental e momentos sem tela.",
+      department: user.curso || "Comunidade Carmelita",
     });
   };
+
   return (
     <div className="flex flex-col h-full bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div className="flex-1 overflow-y-auto flex flex-col">
@@ -81,255 +116,266 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             <ChevronLeft size={24} color="#2D3A2E" />
           </button>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", margin: 0 }}>
-            🏆 Pódio
+            🏆 Pódio da Feira
           </h1>
         </div>
 
-        {/* Podium section */}
-        <div className="px-6 pb-6 flex-shrink-0">
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: 8,
-            alignItems: "flex-end",
-            justifyItems: "center",
-          }}>
-            {/* 2nd place - left */}
+        {/* Loading or Empty State */}
+        {isLoading ? (
+          <div style={{ textAlign: "center", padding: "60px 20px" }}>
+            <div style={{ fontSize: 28, marginBottom: 12 }}>⏳</div>
+            <p style={{ fontSize: 14, color: "#7A8A7B" }}>Carregando ranking oficial...</p>
+          </div>
+        ) : ranking.length === 0 ? (
+          <div className="px-6 py-8">
             <div
-              onClick={() => handleOpenProfile(topThree[1])}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", cursor: "pointer" }}
+              style={{
+                background: "#F5EFE3",
+                borderRadius: 20,
+                padding: "32px 20px",
+                border: "1.5px dashed rgba(214,140,112,0.4)",
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 12,
+              }}
             >
               <div
                 style={{
-                  width: 60,
-                  height: 60,
+                  width: 56,
+                  height: 56,
                   borderRadius: "50%",
-                  border: "3px solid #C0C0C0",
-                  overflow: "hidden",
-                  boxShadow: "0 4px 12px rgba(192,192,192,0.3)",
+                  background: "rgba(214,140,112,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <img
-                  src={topThree[1].avatar}
-                  alt={topThree[1].name}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
+                <Trophy size={28} color="#D68C70" />
               </div>
-              <div style={{
-                background: "linear-gradient(135deg, #C0C0C0, #A9A9A9)",
-                borderRadius: 12,
-                padding: "12px 8px",
-                width: "100%",
-                textAlign: "center",
-                boxShadow: "0 4px 12px rgba(192,192,192,0.2)",
-              }}>
-                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#FDFBF7" }}>2º</p>
-                <p style={{ margin: 0, marginTop: 4, fontSize: 10, color: "#FDFBF7", fontWeight: 600 }}>
-                  {topThree[1].points}
-                </p>
-              </div>
-              <p style={{ margin: 0, fontSize: 11, color: "#2D3A2E", fontWeight: 600, textAlign: "center", lineHeight: 1.3 }}>
-                {topThree[1].name.split(" ")[0]}
-              </p>
-            </div>
-
-            {/* 1st place - center */}
-            <div
-              onClick={() => handleOpenProfile(topThree[0])}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", transform: "translateY(0)", cursor: "pointer" }}
-            >
-              <div
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: "50%",
-                  border: "4px solid #FFD700",
-                  overflow: "hidden",
-                  boxShadow: "0 8px 20px rgba(255,215,0,0.4)",
-                }}
-              >
-                <img
-                  src={topThree[0].avatar}
-                  alt={topThree[0].name}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              </div>
-              <div style={{
-                background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                borderRadius: 12,
-                padding: "14px 10px",
-                width: "100%",
-                textAlign: "center",
-                boxShadow: "0 6px 16px rgba(255,215,0,0.3)",
-              }}>
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#2D3A2E" }}>1º 🎖️</p>
-                <p style={{ margin: 0, marginTop: 4, fontSize: 11, color: "#2D3A2E", fontWeight: 600 }}>
-                  {topThree[0].points}
-                </p>
-              </div>
-              <p style={{ margin: 0, fontSize: 12, color: "#D68C70", fontWeight: 700, textAlign: "center", lineHeight: 1.3 }}>
-                {topThree[0].name.split(" ")[0]}
-              </p>
-            </div>
-
-            {/* 3rd place - right */}
-            <div
-              onClick={() => handleOpenProfile(topThree[2])}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", cursor: "pointer" }}
-            >
-              <div
-                style={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: "50%",
-                  border: "3px solid #CD7F32",
-                  overflow: "hidden",
-                  boxShadow: "0 4px 12px rgba(205,127,50,0.3)",
-                }}
-              >
-                <img
-                  src={topThree[2].avatar}
-                  alt={topThree[2].name}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              </div>
-              <div style={{
-                background: "linear-gradient(135deg, #CD7F32, #B87333)",
-                borderRadius: 12,
-                padding: "12px 8px",
-                width: "100%",
-                textAlign: "center",
-                boxShadow: "0 4px 12px rgba(205,127,50,0.2)",
-              }}>
-                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#FDFBF7" }}>3º</p>
-                <p style={{ margin: 0, marginTop: 4, fontSize: 10, color: "#FDFBF7", fontWeight: 600 }}>
-                  {topThree[2].points}
-                </p>
-              </div>
-              <p style={{ margin: 0, fontSize: 11, color: "#2D3A2E", fontWeight: 600, textAlign: "center", lineHeight: 1.3 }}>
-                {topThree[2].name.split(" ")[0]}
+              <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 500, color: "#2D3A2E", margin: 0 }}>
+                O pódio está à sua espera!
+              </h2>
+              <p style={{ fontSize: 13, color: "#7A8A7B", lineHeight: 1.5, margin: 0, maxWidth: 280 }}>
+                Nenhum participante acumulou pontos ainda. Complete sessões de foco no Pomodoro ou realize desafios para inaugurar o 1º lugar!
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Ranking list */}
-        <div className="px-6 pb-6 flex-1 overflow-y-auto">
-          <p style={{ fontSize: 12, fontWeight: 600, color: "#7A8A7B", marginBottom: 12 }}>
-            Ranking Completo
-          </p>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
-            {restRanking.map((user) => {
-              const isSilvia = user.position === 4;
-              return (
-                <div
-                  key={user.position}
-                  onClick={() => handleOpenProfile(user)}
-                  style={{
-                    background: isSilvia
-                      ? "linear-gradient(135deg, rgba(214,140,112,0.15), rgba(214,140,112,0.05))"
-                      : "#F5EFE3",
-                    border: isSilvia ? "2px solid #D68C70" : "1px solid rgba(45,58,46,0.08)",
-                    borderRadius: 12,
-                    padding: "12px 14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    cursor: "pointer",
-                  }}
-                >
+        ) : (
+          <>
+            {/* Podium section */}
+            <div className="px-6 pb-6 flex-shrink-0">
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: 8,
+                  alignItems: "flex-end",
+                  justifyItems: "center",
+                }}
+              >
+                {/* 2nd place - left */}
+                {second ? (
                   <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: "50%",
-                      background: "#2D3A2E",
-                      color: "#FDFBF7",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 14,
-                      fontWeight: 700,
-                      flexShrink: 0,
-                    }}
+                    onClick={() => handleOpenProfile(second)}
+                    style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", cursor: "pointer" }}
                   >
-                    {user.position}
-                  </div>
-
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "50%",
-                      overflow: "hidden",
-                      border: "2px solid #D68C70",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <img
-                      src={user.avatar}
-                      alt={user.name}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  </div>
-
-                  <div style={{ flex: 1 }}>
-                    <p style={{
-                      margin: 0,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: isSilvia ? "#D68C70" : "#2D3A2E",
-                    }}>
-                      {user.name} {isSilvia && "👤"}
-                    </p>
-                    <p style={{ margin: 0, marginTop: 2, fontSize: 11, color: "#7A8A7B" }}>
-                      {user.points} pontos
+                    <div
+                      style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: "50%",
+                        border: "3px solid #C0C0C0",
+                        overflow: "hidden",
+                        boxShadow: "0 4px 12px rgba(192,192,192,0.3)",
+                      }}
+                    >
+                      <img
+                        src={second.avatar}
+                        alt={second.name}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        background: "linear-gradient(135deg, #C0C0C0, #A9A9A9)",
+                        borderRadius: 12,
+                        padding: "12px 8px",
+                        width: "100%",
+                        textAlign: "center",
+                        boxShadow: "0 4px 12px rgba(192,192,192,0.2)",
+                      }}
+                    >
+                      <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#FDFBF7" }}>2º</p>
+                      <p style={{ margin: 0, marginTop: 4, fontSize: 10, color: "#FDFBF7", fontWeight: 600 }}>
+                        {second.points} pts
+                      </p>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 11, color: "#2D3A2E", fontWeight: 600, textAlign: "center", lineHeight: 1.3 }}>
+                      {second.name.split(" ")[0]}
                     </p>
                   </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", opacity: 0.4 }}>
+                    <div style={{ width: 50, height: 50, borderRadius: "50%", border: "2px dashed #C0C0C0" }} />
+                    <div style={{ background: "#EDE7DA", borderRadius: 12, padding: "10px 6px", width: "100%", textAlign: "center" }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#7A8A7B" }}>2º</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 1st place - center */}
+                {first ? (
+                  <div
+                    onClick={() => handleOpenProfile(first)}
+                    style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", transform: "translateY(0)", cursor: "pointer" }}
+                  >
+                    <div
+                      style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: "50%",
+                        border: "4px solid #FFD700",
+                        overflow: "hidden",
+                        boxShadow: "0 8px 20px rgba(255,215,0,0.4)",
+                      }}
+                    >
+                      <img
+                        src={first.avatar}
+                        alt={first.name}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                        borderRadius: 12,
+                        padding: "14px 10px",
+                        width: "100%",
+                        textAlign: "center",
+                        boxShadow: "0 6px 16px rgba(255,215,0,0.3)",
+                      }}
+                    >
+                      <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#2D3A2E" }}>1º 🎖️</p>
+                      <p style={{ margin: 0, marginTop: 4, fontSize: 11, color: "#2D3A2E", fontWeight: 600 }}>
+                        {first.points} pts
+                      </p>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 12, color: "#D68C70", fontWeight: 700, textAlign: "center", lineHeight: 1.3 }}>
+                      {first.name.split(" ")[0]}
+                    </p>
+                  </div>
+                ) : null}
+
+                {/* 3rd place - right */}
+                {third ? (
+                  <div
+                    onClick={() => handleOpenProfile(third)}
+                    style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", cursor: "pointer" }}
+                  >
+                    <div
+                      style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: "50%",
+                        border: "3px solid #CD7F32",
+                        overflow: "hidden",
+                        boxShadow: "0 4px 12px rgba(205,127,50,0.3)",
+                      }}
+                    >
+                      <img
+                        src={third.avatar}
+                        alt={third.name}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        background: "linear-gradient(135deg, #CD7F32, #B87333)",
+                        borderRadius: 12,
+                        padding: "12px 8px",
+                        width: "100%",
+                        textAlign: "center",
+                        boxShadow: "0 4px 12px rgba(205,127,50,0.2)",
+                      }}
+                    >
+                      <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#FDFBF7" }}>3º</p>
+                      <p style={{ margin: 0, marginTop: 4, fontSize: 10, color: "#FDFBF7", fontWeight: 600 }}>
+                        {third.points} pts
+                      </p>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 11, color: "#2D3A2E", fontWeight: 600, textAlign: "center", lineHeight: 1.3 }}>
+                      {third.name.split(" ")[0]}
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%", opacity: 0.4 }}>
+                    <div style={{ width: 50, height: 50, borderRadius: "50%", border: "2px dashed #CD7F32" }} />
+                    <div style={{ background: "#EDE7DA", borderRadius: 12, padding: "10px 6px", width: "100%", textAlign: "center" }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#7A8A7B" }}>3º</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Ranking list */}
+            {restRanking.length > 0 && (
+              <div className="px-6 pb-6 flex-1 overflow-y-auto">
+                <p style={{ fontSize: 12, fontWeight: 600, color: "#7A8A7B", marginBottom: 12 }}>
+                  Demais Participantes
+                </p>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
+                  {restRanking.map((user) => {
+                    const isCurrentUser = currentUser?.id && user.id === currentUser.id;
+                    return (
+                      <div
+                        key={user.position}
+                        onClick={() => handleOpenProfile(user)}
+                        style={{
+                          background: isCurrentUser
+                            ? "linear-gradient(135deg, rgba(214,140,112,0.15), rgba(214,140,112,0.05))"
+                            : "#F5EFE3",
+                          border: isCurrentUser ? "2px solid #D68C70" : "1px solid rgba(45,58,46,0.08)",
+                          borderRadius: 12,
+                          padding: "12px 14px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <span style={{ fontSize: 14, fontWeight: 700, color: isCurrentUser ? "#D68C70" : "#7A8A7B", width: 24, textAlign: "center" }}>
+                          {user.position}º
+                        </span>
+                        <img
+                          src={user.avatar}
+                          alt={user.name}
+                          style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: "1.5px solid #D68C70" }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#2D3A2E", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {user.name} {isCurrentUser && "(Você)"}
+                          </p>
+                          {user.curso && (
+                            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#7A8A7B" }}>
+                              {user.curso}
+                            </p>
+                          )}
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#D68C70" }}>
+                          {user.points} pts
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Silvia footer - fixed */}
-      <div
-        onClick={() => handleOpenProfile(leaderboard[3])}
-        style={{
-          background: "linear-gradient(180deg, transparent, rgba(45,58,46,0.02))",
-          borderTop: "1px solid rgba(45,58,46,0.08)",
-          padding: "12px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          cursor: "pointer",
-        }}
-      >
-        <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: "50%",
-            overflow: "hidden",
-            border: "2px solid #D68C70",
-          }}
-        >
-          <img
-            src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"
-            alt="Silvia"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        </div>
-        <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#2D3A2E" }}>
-            Sua posição
-          </p>
-          <p style={{ margin: 0, marginTop: 1, fontSize: 11, color: "#7A8A7B" }}>
-            🌟 4º lugar • 2.450 pontos
-          </p>
-        </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       <UserProfileModal

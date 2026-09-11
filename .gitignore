@@ -4,3 +4,9 @@ dist-ssr
 *.local
 .DS_Store
 *.log
+bin/
+obj/
+*.db
+*.db-shm
+*.db-wal
+

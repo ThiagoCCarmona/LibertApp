@@ -45,18 +45,26 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
     setErrorMessage("");
 
     try {
-      const { sendNativeMessage } = await import("../../services/nativeBridge");
-      const user = await sendNativeMessage("LOGIN_USER", {
-        email: email.trim(),
-        senha: senha.trim(),
-      });
+      const { apiService } = await import("../../services/apiService");
+      let user: any = null;
+
+      try {
+        user = await apiService.login(email.trim(), senha.trim());
+      } catch (apiErr) {
+        console.log("API central não respondeu, tentando bridge local:", apiErr);
+        const { sendNativeMessage } = await import("../../services/nativeBridge");
+        user = await sendNativeMessage("LOGIN_USER", {
+          email: email.trim(),
+          senha: senha.trim(),
+        });
+      }
 
       if (user) {
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("currentUser", JSON.stringify(user));
         onNavigate("home");
       } else {
-        setErrorMessage("E-mail ou senha inválidos.");
+        setErrorMessage("E-mail ou senha incorretos.");
       }
     } catch (err: any) {
       setErrorMessage(err?.message || "E-mail ou senha incorretos.");

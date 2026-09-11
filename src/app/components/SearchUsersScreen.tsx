@@ -3,6 +3,7 @@ import { ChevronLeft, Search, UserPlus, UserCheck, Trophy, Sparkles, Filter } fr
 import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
 import { UnfollowConfirmModal } from "./UnfollowConfirmModal";
 import { sendNativeMessage } from "../../services/nativeBridge";
+import { apiService, type SearchUserDto } from "../../services/apiService";
 
 export interface SearchableUser {
   id: number;
@@ -18,140 +19,61 @@ export interface SearchableUser {
   isFollowing: boolean;
 }
 
-const INITIAL_USERS: SearchableUser[] = [
-  {
-    id: 1,
-    name: "João Silva",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-    level: 4,
-    levelName: "Nível 4 - Mestre do Foco",
-    points: 2850,
-    streakDays: 12,
-    focusMinutes: 420,
-    department: "Engenharia de Software",
-    bio: "Praticante de caminhadas matinais e 0 notificações durante o horário de aula.",
-    isFollowing: false,
-  },
-  {
-    id: 2,
-    name: "Maria Costa",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
-    level: 4,
-    levelName: "Nível 4 - Mestre do Foco",
-    points: 2720,
-    streakDays: 10,
-    focusMinutes: 380,
-    department: "Administração",
-    bio: "Substituindo feeds infinitos por livros e conversas ao vivo.",
-    isFollowing: true,
-  },
-  {
-    id: 3,
-    name: "Pedro Oliveira",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
-    level: 3,
-    levelName: "Nível 3 - Foco Consciente",
-    points: 2580,
-    streakDays: 9,
-    focusMinutes: 310,
-    department: "Psicologia",
-    bio: "Pesquisando os benefícios do detox digital na atenção sustentada.",
-    isFollowing: false,
-  },
-  {
-    id: 4,
-    name: "Ana Ferreira",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
-    level: 3,
-    levelName: "Nível 3 - Foco Consciente",
-    points: 2320,
-    streakDays: 8,
-    focusMinutes: 290,
-    department: "Arquitetura & Urbanismo",
-    bio: "Desenhando à mão livre ao invés de ficar navegando no celular.",
-    isFollowing: true,
-  },
-  {
-    id: 5,
-    name: "Carlos Mendes",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
-    level: 3,
-    levelName: "Nível 3 - Foco Consciente",
-    points: 2180,
-    streakDays: 6,
-    focusMinutes: 250,
-    department: "Direito",
-    bio: "Foco total na leitura de casos sem distrações sonoras.",
-    isFollowing: false,
-  },
-  {
-    id: 6,
-    name: "Beatriz Santos",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
-    level: 2,
-    levelName: "Nível 2 - Presença Ativa",
-    points: 2050,
-    streakDays: 5,
-    focusMinutes: 210,
-    department: "Medicina",
-    bio: "Cuidando da mente com sono de qualidade e limites de tela.",
-    isFollowing: false,
-  },
-  {
-    id: 7,
-    name: "Ricardo Lima",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-    level: 2,
-    levelName: "Nível 2 - Presença Ativa",
-    points: 1920,
-    streakDays: 4,
-    focusMinutes: 190,
-    department: "Comunicação Social",
-    bio: "Aprendendo a valorizar conversas presenciais sem telas na mesa.",
-    isFollowing: false,
-  },
-  {
-    id: 8,
-    name: "Fernanda Dias",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-    level: 2,
-    levelName: "Nível 2 - Presença Ativa",
-    points: 1780,
-    streakDays: 4,
-    focusMinutes: 170,
-    department: "Ciências Biológicas",
-    bio: "Observação de pássaros e ar livre aos fins de semana.",
-    isFollowing: false,
-  },
-];
-
 export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [users, setUsers] = useState<SearchableUser[]>(INITIAL_USERS);
+  const [users, setUsers] = useState<SearchableUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [filterFollowingOnly, setFilterFollowingOnly] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
   const [userToUnfollow, setUserToUnfollow] = useState<SearchableUser | null>(null);
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem("currentUser");
+      if (stored) setCurrentUser(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
     let isMounted = true;
     async function fetchUsers() {
+      setIsLoading(true);
+      const callerId = currentUser?.id || 1;
+
+      try {
+        // 1. Tenta API central na VPS
+        const apiUsers = await apiService.searchUsers(searchTerm, callerId, filterFollowingOnly);
+        if (isMounted) {
+          setUsers(apiUsers || []);
+          setIsLoading(false);
+          return;
+        }
+      } catch (apiErr) {
+        console.warn("API VPS indisponível para busca, tentando bridge nativa:", apiErr);
+      }
+
+      // 2. Fallback bridge nativa
       try {
         const result = await sendNativeMessage<SearchableUser[]>("SEARCH_USERS", {
           termo: searchTerm,
           apenasSeguindo: filterFollowingOnly,
         });
-        if (isMounted && result && Array.isArray(result) && result.length > 0) {
+        if (isMounted && result && Array.isArray(result)) {
           setUsers(result);
         }
       } catch (err) {
         console.warn("Erro ao buscar usuários nativos:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     }
+
     fetchUsers();
     return () => {
       isMounted = false;
     };
-  }, [searchTerm, filterFollowingOnly]);
+  }, [searchTerm, filterFollowingOnly, currentUser?.id]);
 
   const handleFollowClick = async (user: SearchableUser) => {
     if (user.isFollowing) {
@@ -163,9 +85,13 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
         prev.map((u) => (u.id === user.id ? { ...u, isFollowing: true } : u))
       );
       try {
-        await sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: user.id });
-      } catch (err) {
-        console.warn("Erro ao seguir usuário:", err);
+        await apiService.toggleFollow(user.id, currentUser?.id || 1);
+      } catch {
+        try {
+          await sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: user.id });
+        } catch (err) {
+          console.warn("Erro ao seguir usuário:", err);
+        }
       }
     }
   };
@@ -178,9 +104,13 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
       );
       setUserToUnfollow(null);
       try {
-        await sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: userId });
-      } catch (err) {
-        console.warn("Erro ao deixar de seguir usuário:", err);
+        await apiService.toggleFollow(userId, currentUser?.id || 1);
+      } catch {
+        try {
+          await sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: userId });
+        } catch (err) {
+          console.warn("Erro ao deixar de seguir usuário:", err);
+        }
       }
     }
   };
@@ -478,12 +408,16 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
               }
             : null
         }
-        onToggleFollow={(userId, nextState) => {
+        onToggleFollow={async (userId, nextState) => {
           if (typeof userId === "number") {
             setUsers((prev) =>
               prev.map((u) => (u.id === userId ? { ...u, isFollowing: nextState } : u))
             );
-            sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: userId }).catch(console.warn);
+            try {
+              await apiService.toggleFollow(userId, currentUser?.id || 1);
+            } catch {
+              sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: userId }).catch(console.warn);
+            }
           }
         }}
       />

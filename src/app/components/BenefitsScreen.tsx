@@ -1,14 +1,95 @@
+import { useState, useEffect } from "react";
 import { ChevronLeft, Unlock, Lock } from "lucide-react";
+import { apiService } from "../../services/apiService";
+import { sendNativeMessage } from "../../services/nativeBridge";
 
-const partners = [
-  { id: 1, name: "Verde Brasil", icon: "🥗", level: 1, unlocked: true },
-  { id: 2, name: "Café do Bem", icon: "☕", level: 2, unlocked: true },
-  { id: 3, name: "Raízes", icon: "🌾", level: 3, unlocked: true },
-  { id: 4, name: "Horta & Mesa", icon: "🥕", level: 4, unlocked: false },
-  { id: 5, name: "Natural Fit", icon: "🥑", level: 5, unlocked: false },
+interface BenefitPartner {
+  id: number;
+  nome: string;
+  icone: string;
+  nivelRequerido: number;
+  descontoPercentual: number;
+  descricao: string;
+  unlocked: boolean;
+}
+
+const DEFAULT_PARTNERS: BenefitPartner[] = [
+  { id: 1, nome: "Verde Brasil", icone: "🥗", nivelRequerido: 1, descontoPercentual: 10, descricao: "Opções orgânicas e saudáveis", unlocked: true },
+  { id: 2, nome: "Café do Bem", icone: "☕", nivelRequerido: 2, descontoPercentual: 12, descricao: "Cafés especiais e grãos selecionados", unlocked: true },
+  { id: 3, nome: "Raízes Restaurante", icone: "🌾", nivelRequerido: 3, descontoPercentual: 15, descricao: "Comida caseira e pratos executivos", unlocked: false },
+  { id: 4, nome: "Horta & Mesa", icone: "🥕", nivelRequerido: 4, descontoPercentual: 15, descricao: "Saladas e refeições veganas", unlocked: false },
+  { id: 5, nome: "Natural Fit", icone: "🥑", nivelRequerido: 5, descontoPercentual: 20, descricao: "Bowls e shakes proteicos", unlocked: false },
 ];
 
 export function BenefitsScreen({ onBack, onOpenCard }: { onBack: () => void; onOpenCard: () => void }) {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [partners, setPartners] = useState<BenefitPartner[]>(DEFAULT_PARTNERS);
+  const [userLevel, setUserLevel] = useState(1);
+  const [userPoints, setUserPoints] = useState(0);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("currentUser");
+      if (stored) {
+        const u = JSON.parse(stored);
+        setCurrentUser(u);
+        setUserLevel(u.nivel || 1);
+        setUserPoints(u.pontos || 0);
+      }
+    } catch {}
+
+    sendNativeMessage("GET_CURRENT_USER")
+      .then((u) => {
+        if (u) {
+          setCurrentUser(u);
+          setUserLevel(u.nivel || u.Nivel || 1);
+          setUserPoints(u.pontos || u.Pontos || 0);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadBenefits() {
+      try {
+        const data = await apiService.getBenefits(currentUser?.id);
+        if (isMounted && data && data.parceiros && Array.isArray(data.parceiros)) {
+          setPartners(data.parceiros.map((p: any) => ({
+            id: p.id || p.Id,
+            nome: p.nome || p.Nome,
+            icone: p.icone || p.Icone || "🥗",
+            nivelRequerido: p.nivelRequerido || p.NivelRequerido,
+            descontoPercentual: p.descontoPercentual || p.DescontoPercentual || 10,
+            descricao: p.descricao || p.Descricao || "",
+            unlocked: Boolean(p.unlocked),
+          })));
+          if (data.userLevel) setUserLevel(data.userLevel);
+          if (data.userPoints !== undefined) setUserPoints(data.userPoints);
+          return;
+        }
+      } catch (err) {
+        console.warn("API de benefícios indisponível, usando fallback por nível:", err);
+      }
+
+      // Fallback local por nível
+      setPartners((prev) =>
+        prev.map((p) => ({
+          ...p,
+          unlocked: userLevel >= p.nivelRequerido,
+        }))
+      );
+    }
+
+    loadBenefits();
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser?.id, userLevel]);
+
+  const unlockedCount = partners.filter((p) => p.unlocked).length;
+  const totalCount = partners.length;
+  const nextLocked = partners.find((p) => !p.unlocked);
   return (
     <div className="flex flex-col h-full bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div className="flex-1 overflow-y-auto">
@@ -62,7 +143,7 @@ export function BenefitsScreen({ onBack, onOpenCard }: { onBack: () => void; onO
             Restaurantes Parceiros
           </h2>
           <p style={{ fontSize: 12, color: "#7A8A7B", marginBottom: 16 }}>
-            Desbloqueados: 3 de 5 • Nível atual: 3
+            Desbloqueados: {unlockedCount} de {totalCount} • Nível atual: {userLevel} ({userPoints} pts)
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
@@ -80,14 +161,19 @@ export function BenefitsScreen({ onBack, onOpenCard }: { onBack: () => void; onO
                   opacity: partner.unlocked ? 1 : 0.6,
                 }}
               >
-                <div style={{ fontSize: 28 }}>{partner.icon}</div>
+                <div style={{ fontSize: 28 }}>{partner.icone}</div>
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#2D3A2E" }}>
-                    {partner.name}
+                    {partner.nome} ({partner.descontoPercentual}% OFF)
                   </p>
                   <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#7A8A7B" }}>
-                    Nível {partner.level} • {partner.unlocked ? "Desbloqueado" : "Desbloqueie com mais pontos"}
+                    Nível {partner.nivelRequerido} • {partner.unlocked ? "Desbloqueado" : "Desbloqueie com mais pontos"}
                   </p>
+                  {partner.descricao && (
+                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#7A8A7B" }}>
+                      {partner.descricao}
+                    </p>
+                  )}
                 </div>
                 <div style={{
                   display: "flex",
@@ -121,7 +207,9 @@ export function BenefitsScreen({ onBack, onOpenCard }: { onBack: () => void; onO
               Próxima meta 🎯
             </p>
             <p style={{ margin: 0, fontSize: 14, color: "#7A8A7B", lineHeight: 1.5 }}>
-              Acumule 2 pontos para desbloquear "Horta & Mesa" e aproveite 15% de desconto em refeições veganas!
+              {nextLocked
+                ? `Acumule pontos no Pomodoro e desafios para atingir o Nível ${nextLocked.nivelRequerido} e desbloquear "${nextLocked.nome}" com ${nextLocked.descontoPercentual}% de desconto!`
+                : "🎉 Parabéns! Você atingiu o nível máximo e desbloqueou todos os parceiros oficiais da feira!"}
             </p>
           </div>
         </div>

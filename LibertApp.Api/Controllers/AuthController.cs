@@ -1,0 +1,140 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using LibertApp.Api.Data;
+using LibertApp.Api.Data.Entities;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace LibertApp.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    private readonly AppDbContext _context;
+
+    public AuthController(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Nome) ||
+            string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.Senha))
+        {
+            return BadRequest(new { message = "Nome, e-mail e senha são obrigatórios." });
+        }
+
+        var emailLower = request.Email.Trim().ToLower();
+        var exists = await _context.Usuarios.AnyAsync(u => u.Email.ToLower() == emailLower);
+        if (exists)
+        {
+            return Conflict(new { message = "Este e-mail já está cadastrado." });
+        }
+
+        var user = new Usuario
+        {
+            Nome = request.Nome.Trim(),
+            Email = emailLower,
+            SenhaHash = HashPassword(request.Senha),
+            Telefone = request.Telefone ?? string.Empty,
+            CPF = request.CPF ?? string.Empty,
+            Curso = request.Curso ?? "Estudante Carmelita",
+            Bio = request.Bio ?? "Focado em momentos de presença e desconexão digital.",
+            Localizacao = "Comunidade Carmelita",
+            FotoUrl = !string.IsNullOrEmpty(request.FotoUrl)
+                ? request.FotoUrl
+                : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&auto=format",
+            Pontos = 150,
+            Nivel = 1,
+            DataCriacao = DateTime.UtcNow
+        };
+
+        _context.Usuarios.Add(user);
+        await _context.SaveChangesAsync();
+
+        user.NumeroCarteira = $"LBT-2026-{1000 + user.Id}";
+        await _context.SaveChangesAsync();
+
+        return Ok(ToDto(user));
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        var emailLower = request.Email.Trim().ToLower();
+        var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailLower);
+
+        if (user == null || user.SenhaHash != HashPassword(request.Senha))
+        {
+            return Unauthorized(new { message = "E-mail ou senha incorretos." });
+        }
+
+        return Ok(ToDto(user));
+    }
+
+    [HttpGet("user/{id}")]
+    public async Task<IActionResult> GetUser(int id)
+    {
+        var user = await _context.Usuarios.FindAsync(id);
+        if (user == null) return NotFound(new { message = "Usuário não encontrado." });
+        return Ok(ToDto(user));
+    }
+
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+    {
+        var user = await _context.Usuarios.FindAsync(request.Id);
+        if (user == null) return NotFound(new { message = "Usuário não encontrado." });
+
+        user.Nome = !string.IsNullOrWhiteSpace(request.Nome) ? request.Nome.Trim() : user.Nome;
+        user.Telefone = request.Telefone ?? user.Telefone;
+        user.CPF = request.CPF ?? user.CPF;
+        user.Curso = request.Curso ?? user.Curso;
+        user.Bio = request.Bio ?? user.Bio;
+        user.Localizacao = request.Localizacao ?? user.Localizacao;
+        if (!string.IsNullOrEmpty(request.FotoUrl)) user.FotoUrl = request.FotoUrl;
+
+        await _context.SaveChangesAsync();
+        return Ok(ToDto(user));
+    }
+
+    [HttpPost("recover")]
+    public IActionResult RecoverPassword([FromBody] RecoverRequest request)
+    {
+        // Em produção, integraria com SMTP para envio de token real
+        return Ok(new { message = "Link de recuperação enviado com sucesso para o e-mail informado." });
+    }
+
+    private static string HashPassword(string password)
+    {
+        using var sha = SHA256.Create();
+        var bytes = Encoding.UTF8.GetBytes(password);
+        var hash = sha.ComputeHash(bytes);
+        return Convert.ToHexString(hash);
+    }
+
+    private static object ToDto(Usuario u) => new
+    {
+        id = u.Id,
+        nome = u.Nome,
+        email = u.Email,
+        telefone = u.Telefone,
+        cpf = u.CPF,
+        curso = u.Curso,
+        bio = u.Bio,
+        localizacao = u.Localizacao,
+        numeroCarteira = u.NumeroCarteira,
+        fotoUrl = u.FotoUrl,
+        pontos = u.Pontos,
+        nivel = u.Nivel
+    };
+}
+
+public record RegisterRequest(string Nome, string Email, string Senha, string? Telefone, string? CPF, string? Curso, string? Bio, string? FotoUrl);
+public record LoginRequest(string Email, string Senha);
+public record UpdateProfileRequest(int Id, string? Nome, string? Telefone, string? CPF, string? Curso, string? Bio, string? Localizacao, string? FotoUrl);
+public record RecoverRequest(string Email);

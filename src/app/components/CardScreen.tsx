@@ -1,7 +1,9 @@
+import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
+import { sendNativeMessage } from "../../services/nativeBridge";
 
 // Simple QR Code SVG - stylized representation
-const StylizedQRCode = () => (
+const StylizedQRCode = ({ code }: { code: string }) => (
   <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
     <rect x="0" y="0" width="120" height="120" fill="#FDFBF7" stroke="#D68C70" strokeWidth="2" />
     
@@ -40,21 +42,42 @@ const StylizedQRCode = () => (
 );
 
 // Barcode SVG - stylized representation
-const StylizedBarcode = () => (
-  <svg width="140" height="60" viewBox="0 0 140 60" fill="none">
+const StylizedBarcode = ({ code }: { code: string }) => (
+  <svg width="150" height="60" viewBox="0 0 150 60" fill="none">
     {/* Barcode lines */}
-    {[0, 3, 7, 10, 14, 18, 21, 25, 29, 33, 37, 41, 44, 48, 52, 56, 60, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 127, 131, 135].map((x) => (
-      <line key={x} x1={x} y1="0" x2={x} y2={Math.random() > 0.5 ? "45" : "50"} stroke="#2D3A2E" strokeWidth="1.5" />
+    {[0, 3, 7, 10, 14, 18, 21, 25, 29, 33, 37, 41, 44, 48, 52, 56, 60, 63, 67, 71, 75, 79, 83, 87, 91, 95, 99, 103, 107, 111, 115, 119, 123, 127, 131, 135, 139, 143].map((x) => (
+      <line key={x} x1={x} y1="0" x2={x} y2={x % 2 === 0 ? "46" : "50"} stroke="#FDFBF7" strokeWidth="1.5" />
     ))}
     
     {/* Numbers below */}
-    <text x="70" y="58" fontSize="8" textAnchor="middle" fill="#2D3A2E" fontWeight="600">
-      SILVIAM-2024-001
+    <text x="75" y="58" fontSize="9" textAnchor="middle" fill="#FDFBF7" fontWeight="600" letterSpacing="0.05em">
+      {code}
     </text>
   </svg>
 );
 
 export function CardScreen({ onBack }: { onBack: () => void }) {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("currentUser");
+      if (stored) setCurrentUser(JSON.parse(stored));
+    } catch {}
+
+    sendNativeMessage("GET_CURRENT_USER")
+      .then((u) => {
+        if (u) setCurrentUser(u);
+      })
+      .catch(() => {});
+  }, []);
+
+  const displayName = currentUser?.nome || "Estudante Carmelita";
+  const displayAvatar = currentUser?.fotoUrl || "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=200&h=200&fit=crop&auto=format";
+  const displayCurso = currentUser?.curso || "Graduação Carmelita";
+  const cardCode = currentUser?.numeroCarteira || (currentUser?.id ? `LBT-2026-${String(currentUser.id).padStart(4, "0")}` : "LBT-2026-0001");
+  const displayLevel = currentUser?.nivel || Math.max(1, Math.floor((currentUser?.pontos || 0) / 500) + 1);
+
   return (
     <div className="flex flex-col h-full bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Header with back button */}
@@ -92,13 +115,13 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
           style={{
             background: "linear-gradient(135deg, #2D3A2E 0%, #3D5040 40%, #4A6050 100%)",
             borderRadius: 24,
-            padding: "28px 20px",
+            padding: "24px 20px 20px",
             width: "90%",
             maxWidth: 340,
             boxShadow: "0 20px 40px rgba(45,58,46,0.3), 0 8px 24px rgba(45,58,46,0.2)",
             position: "relative",
             overflow: "hidden",
-            marginBottom: 24,
+            marginBottom: 20,
           }}
         >
           {/* Decorative circles */}
@@ -124,46 +147,55 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
           {/* Card content */}
           <div style={{ position: "relative", zIndex: 2 }}>
             {/* Logo and title */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-              <svg width="24" height="24" viewBox="0 0 44 44" fill="none">
-                <path d="M22 36 L22 13" stroke="rgba(253,251,247,0.8)" strokeWidth="2" strokeLinecap="round" />
-                <path d="M22 26 Q16 24 14 18" stroke="rgba(253,251,247,0.8)" strokeWidth="2" strokeLinecap="round" />
-                <path d="M22 21 Q28 19 30 13" stroke="rgba(253,251,247,0.8)" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <div>
-                <p style={{ margin: 0, fontSize: 11, color: "rgba(253,251,247,0.6)", fontWeight: 500 }}>
-                  LibertApp
-                </p>
-                <p style={{ margin: 0, fontSize: 13, color: "#FDFBF7", fontWeight: 600 }}>
-                  Membro Ativo
-                </p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="24" height="24" viewBox="0 0 44 44" fill="none">
+                  <path d="M22 36 L22 13" stroke="rgba(253,251,247,0.8)" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M22 26 Q16 24 14 18" stroke="rgba(253,251,247,0.8)" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M22 21 Q28 19 30 13" stroke="rgba(253,251,247,0.8)" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <div>
+                  <p style={{ margin: 0, fontSize: 11, color: "rgba(253,251,247,0.6)", fontWeight: 500 }}>
+                    LibertApp
+                  </p>
+                  <p style={{ margin: 0, fontSize: 13, color: "#FDFBF7", fontWeight: 600 }}>
+                    Feira Acadêmica 2026
+                  </p>
+                </div>
+              </div>
+              <div style={{
+                background: "rgba(214,140,112,0.25)", borderRadius: 16,
+                padding: "4px 10px", border: "1px solid rgba(214,140,112,0.4)",
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#D68C70" }}>NV {displayLevel}</span>
               </div>
             </div>
 
             {/* Avatar and name */}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
               <div
                 style={{
-                  width: 64,
-                  height: 64,
+                  width: 60,
+                  height: 60,
                   borderRadius: "50%",
                   background: "rgba(253,251,247,0.1)",
-                  border: "2px solid rgba(214,140,112,0.3)",
+                  border: "2.5px solid #D68C70",
                   overflow: "hidden",
+                  flexShrink: 0,
                 }}
               >
                 <img
-                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"
-                  alt="Silvia"
+                  src={displayAvatar}
+                  alt={displayName}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               </div>
-              <div>
-                <p style={{ margin: 0, fontSize: 12, color: "rgba(253,251,247,0.6)", fontWeight: 500 }}>
-                  Titular
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 11, color: "rgba(253,251,247,0.6)", fontWeight: 500 }}>
+                  Estudante Titular
                 </p>
-                <p style={{ margin: 0, marginTop: 2, fontSize: 16, color: "#FDFBF7", fontWeight: 600 }}>
-                  Silvia Mendes
+                <p style={{ margin: 0, marginTop: 2, fontSize: 16, color: "#FDFBF7", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {displayName}
                 </p>
               </div>
             </div>
@@ -173,43 +205,43 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
               gap: 12,
-              marginBottom: 20,
-              paddingBottom: 20,
+              marginBottom: 16,
+              paddingBottom: 14,
               borderBottom: "1px solid rgba(214,140,112,0.2)",
             }}>
               <div>
                 <p style={{ margin: 0, fontSize: 10, color: "rgba(253,251,247,0.5)", fontWeight: 500 }}>
-                  Data de Nascimento
+                  Curso / Departamento
                 </p>
-                <p style={{ margin: 0, marginTop: 4, fontSize: 12, color: "#FDFBF7", fontWeight: 600 }}>
-                  15/03/1985
+                <p style={{ margin: 0, marginTop: 3, fontSize: 12, color: "#FDFBF7", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {displayCurso}
                 </p>
               </div>
               <div>
                 <p style={{ margin: 0, fontSize: 10, color: "rgba(253,251,247,0.5)", fontWeight: 500 }}>
                   Nº da Carteira
                 </p>
-                <p style={{ margin: 0, marginTop: 4, fontSize: 12, color: "#FDFBF7", fontWeight: 600 }}>
-                  LBT-0001-2024
+                <p style={{ margin: 0, marginTop: 3, fontSize: 12, color: "#FDFBF7", fontWeight: 600 }}>
+                  {cardCode}
                 </p>
               </div>
             </div>
 
             {/* Barcode */}
-            <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
-              <StylizedBarcode />
+            <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
+              <StylizedBarcode code={cardCode} />
             </div>
 
             {/* Security note */}
             <p style={{
               margin: 0,
               fontSize: 9,
-              color: "rgba(253,251,247,0.4)",
+              color: "rgba(253,251,247,0.5)",
               textAlign: "center",
               fontWeight: 500,
               letterSpacing: "0.5px",
             }}>
-              VÁLIDA PARA IDENTIFICAÇÃO NOS ESTABELECIMENTOS PARCEIROS
+              VÁLIDA PARA IDENTIFICAÇÃO E DESCONTOS NOS ESTABELECIMENTOS
             </p>
           </div>
         </div>
@@ -217,16 +249,17 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
         {/* QR Code section */}
         <div
           style={{
-            background: "rgba(255,255,255,0.5)",
+            background: "rgba(255,255,255,0.7)",
             backdropFilter: "blur(10px)",
             borderRadius: 16,
-            padding: "20px",
+            padding: "16px 20px",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: 8,
             width: "90%",
             maxWidth: 280,
+            border: "1px solid rgba(45,58,46,0.08)",
           }}
         >
           <p style={{
@@ -234,19 +267,19 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
             fontSize: 12,
             fontWeight: 600,
             color: "#2D3A2E",
-            marginBottom: 8,
+            marginBottom: 4,
           }}>
-            Código para Validação
+            Código QR de Validação
           </p>
-          <StylizedQRCode />
+          <StylizedQRCode code={cardCode} />
           <p style={{
             margin: 0,
-            marginTop: 8,
+            marginTop: 4,
             fontSize: 10,
             color: "#7A8A7B",
             textAlign: "center",
           }}>
-            Apresente este código ao estabelecimento
+            Apresente este código ao estabelecimento conveniado
           </p>
         </div>
       </div>
