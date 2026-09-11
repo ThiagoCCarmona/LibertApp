@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { ChevronLeft, Search, UserPlus, UserCheck, Trophy, Sparkles, Filter } from "lucide-react";
 import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
+import { UnfollowConfirmModal } from "./UnfollowConfirmModal";
 
 export interface SearchableUser {
   id: number;
@@ -128,11 +129,27 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
   const [users, setUsers] = useState<SearchableUser[]>(INITIAL_USERS);
   const [filterFollowingOnly, setFilterFollowingOnly] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
+  const [userToUnfollow, setUserToUnfollow] = useState<SearchableUser | null>(null);
 
-  const toggleFollow = (userId: number) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, isFollowing: !u.isFollowing } : u))
-    );
+  const handleFollowClick = (user: SearchableUser) => {
+    if (user.isFollowing) {
+      // Solicita confirmação antes de deixar de seguir
+      setUserToUnfollow(user);
+    } else {
+      // Seguir diretamente
+      setUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, isFollowing: true } : u))
+      );
+    }
+  };
+
+  const handleConfirmUnfollow = () => {
+    if (userToUnfollow) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userToUnfollow.id ? { ...u, isFollowing: false } : u))
+      );
+      setUserToUnfollow(null);
+    }
   };
 
   const filteredUsers = useMemo(() => {
@@ -382,7 +399,7 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
 
               {/* Follow Button */}
               <button
-                onClick={() => toggleFollow(user.id)}
+                onClick={() => handleFollowClick(user)}
                 style={{
                   background: user.isFollowing ? "#EDE7DA" : "linear-gradient(135deg, #D68C70, #C4785A)",
                   color: user.isFollowing ? "#2D3A2E" : "#FDFBF7",
@@ -420,12 +437,29 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
       <UserProfileModal
         isOpen={selectedUser !== null}
         onClose={() => setSelectedUser(null)}
-        user={selectedUser}
-        onToggleFollow={(userId) => {
+        user={
+          selectedUser
+            ? {
+                ...selectedUser,
+                isFollowing: users.find((u) => u.id === selectedUser.id)?.isFollowing ?? selectedUser.isFollowing,
+              }
+            : null
+        }
+        onToggleFollow={(userId, nextState) => {
           if (typeof userId === "number") {
-            toggleFollow(userId);
+            setUsers((prev) =>
+              prev.map((u) => (u.id === userId ? { ...u, isFollowing: nextState } : u))
+            );
           }
         }}
+      />
+
+      <UnfollowConfirmModal
+        isOpen={userToUnfollow !== null}
+        onClose={() => setUserToUnfollow(null)}
+        onConfirm={handleConfirmUnfollow}
+        userName={userToUnfollow?.name || ""}
+        userAvatar={userToUnfollow?.avatar}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { X, Trophy, Flame, Clock, Award, ThumbsUp, Check, UserPlus, UserCheck } from "lucide-react";
+import { UnfollowConfirmModal } from "./UnfollowConfirmModal";
 
 export interface UserProfileData {
   id?: number;
@@ -30,6 +31,7 @@ interface UserProfileModalProps {
 export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: UserProfileModalProps) {
   const [incentiveSent, setIncentiveSent] = useState(false);
   const [following, setFollowing] = useState(user?.isFollowing ?? false);
+  const [showUnfollowConfirm, setShowUnfollowConfirm] = useState(false);
 
   React.useEffect(() => {
     if (user) {
@@ -40,10 +42,22 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
   if (!isOpen || !user) return null;
 
   const handleToggleFollow = () => {
-    const nextState = !following;
-    setFollowing(nextState);
+    if (following) {
+      // Solicita confirmação antes de deixar de seguir
+      setShowUnfollowConfirm(true);
+    } else {
+      // Seguir diretamente
+      setFollowing(true);
+      if (onToggleFollow && user.id) {
+        onToggleFollow(user.id, true);
+      }
+    }
+  };
+
+  const handleConfirmUnfollow = () => {
+    setFollowing(false);
     if (onToggleFollow && user.id) {
-      onToggleFollow(user.id, nextState);
+      onToggleFollow(user.id, false);
     }
   };
 
@@ -331,6 +345,14 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
           </button>
         </div>
       </div>
+
+      <UnfollowConfirmModal
+        isOpen={showUnfollowConfirm}
+        onClose={() => setShowUnfollowConfirm(false)}
+        onConfirm={handleConfirmUnfollow}
+        userName={user.name}
+        userAvatar={user.avatar}
+      />
     </div>
   );
 }
