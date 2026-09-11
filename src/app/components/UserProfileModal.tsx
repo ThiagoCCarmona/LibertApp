@@ -28,7 +28,7 @@ interface UserProfileModalProps {
 }
 
 export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: UserProfileModalProps) {
-  const [kudosGiven, setKudosGiven] = useState(false);
+  const [incentiveSent, setIncentiveSent] = useState(false);
   const [following, setFollowing] = useState(user?.isFollowing ?? false);
 
   React.useEffect(() => {
@@ -47,9 +47,9 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
     }
   };
 
-  const handleGiveKudos = () => {
-    setKudosGiven(true);
-    setTimeout(() => setKudosGiven(false), 3000);
+  const handleSendIncentive = () => {
+    setIncentiveSent(true);
+    setTimeout(() => setIncentiveSent(false), 3000);
   };
 
   const defaultAchievements = [
@@ -302,10 +302,10 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
           </button>
 
           <button
-            onClick={handleGiveKudos}
+            onClick={handleSendIncentive}
             style={{
-              background: kudosGiven ? "#3E5C43" : "#F5EFE3",
-              color: kudosGiven ? "#FDFBF7" : "#2D3A2E",
+              background: incentiveSent ? "#3E5C43" : "#F5EFE3",
+              color: incentiveSent ? "#FDFBF7" : "#2D3A2E",
               border: "1px solid rgba(45, 58, 46, 0.08)",
               borderRadius: 14,
               padding: "12px",
@@ -319,13 +319,13 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
               transition: "all 0.2s ease",
             }}
           >
-            {kudosGiven ? (
+            {incentiveSent ? (
               <>
-                <Check size={16} /> Parabenizado com sucesso! 🎉
+                <Check size={16} /> Incentivo enviado! 🎉
               </>
             ) : (
               <>
-                <ThumbsUp size={16} color="#D68C70" /> Enviar Incentivo (Kudos)
+                <ThumbsUp size={16} color="#D68C70" /> Incentivar Colega
               </>
             )}
           </button>
