@@ -62,10 +62,12 @@ const Slider = ({ value, max, onChange }: { value: number; max: number; onChange
 export function ProfileScreen({
   onEditProfile,
   onShowBenefits,
+  onOpenCard,
   onLogout,
 }: {
   onEditProfile?: () => void;
   onShowBenefits?: () => void;
+  onOpenCard?: () => void;
   onLogout?: () => void;
 }) {
   const [currentUser, setCurrentUser] = React.useState<any>(() => {
@@ -280,7 +282,6 @@ export function ProfileScreen({
             style={{
               background: "linear-gradient(135deg, #2D3A2E 0%, #3D5040 100%)",
               border: "none",
-
               borderRadius: 12,
               padding: "14px 16px",
               color: "#FDFBF7",
@@ -293,6 +294,24 @@ export function ProfileScreen({
             }}
           >
             🎁 Benefícios
+          </button>
+          <button
+            onClick={onOpenCard}
+            style={{
+              background: "linear-gradient(135deg, #D68C70 0%, #C4785A 100%)",
+              border: "none",
+              borderRadius: 12,
+              padding: "14px 16px",
+              color: "#FDFBF7",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+              boxShadow: "0 4px 12px rgba(214,140,112,0.2)",
+              transition: "all 0.2s",
+            }}
+          >
+            🪪 Ver Carteirinha
           </button>
         </div>
 

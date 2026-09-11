@@ -239,6 +239,39 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
       return { seguidoId: targetId, isFollowing } as T;
     }
 
+    case "SEARCH_USERS": {
+      const usersJson = localStorage.getItem("libertapp_users");
+      const users: any[] = usersJson ? JSON.parse(usersJson) : [];
+      const followsJson = localStorage.getItem("libertapp_follows");
+      const follows: number[] = followsJson ? JSON.parse(followsJson) : [];
+      const currentJson = localStorage.getItem("currentUser");
+      const cur = currentJson ? JSON.parse(currentJson) : null;
+
+      const termo = (parsedPayload.termo || "").toLowerCase();
+      const apenasSeguindo = !!parsedPayload.apenasSeguindo;
+
+      return users
+        .filter((u) => {
+          if (cur && u.id === cur.id) return false;
+          const matchTerm = !termo || u.nome?.toLowerCase().includes(termo) || u.curso?.toLowerCase().includes(termo);
+          const isFollowing = follows.includes(u.id);
+          if (apenasSeguindo) return matchTerm && isFollowing;
+          return matchTerm;
+        })
+        .map((u) => ({
+          id: u.id,
+          name: u.nome,
+          avatar: u.fotoUrl || DEFAULT_AVATAR_URL,
+          department: u.curso || "Comunidade Carmelita",
+          points: u.pontos || 0,
+          level: u.nivel || 1,
+          streakDays: Math.min(14, Math.floor((u.pontos || 0) / 200)),
+          focusMinutes: Math.floor((u.pontos || 0) * 0.15),
+          isFollowing: follows.includes(u.id),
+          bio: u.bio || "Membro da Comunidade Carmelita.",
+        })) as T;
+    }
+
     case "RECORD_POMODORO": {
       const currentJson = localStorage.getItem("currentUser");
       if (currentJson) {

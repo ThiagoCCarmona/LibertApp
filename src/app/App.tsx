@@ -153,6 +153,7 @@ export default function App() {
                   <ProfileScreen
                     onEditProfile={handleEditProfile}
                     onShowBenefits={handleShowBenefits}
+                    onOpenCard={handleOpenCard}
                     onLogout={handleLogout}
                   />
                 )}
@@ -160,7 +161,7 @@ export default function App() {
             )}
             {currentScreen === "editProfile" && <EditProfileScreen onBack={() => handleBack("main")} />}
             {currentScreen === "benefits" && <BenefitsScreen onBack={() => handleBack("main")} onOpenCard={handleOpenCard} />}
-            {currentScreen === "card" && <CardScreen onBack={() => handleBack("benefits")} />}
+            {currentScreen === "card" && <CardScreen onBack={() => handleBack("main")} />}
             {currentScreen === "leaderboard" && <LeaderboardScreen onBack={() => handleBack("main")} />}
             {currentScreen === "searchUsers" && <SearchUsersScreen onBack={() => handleBack("main")} />}
           </div>

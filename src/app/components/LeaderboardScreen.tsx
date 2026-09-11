@@ -31,9 +31,25 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     let isMounted = true;
     async function loadRanking() {
-      setIsLoading(true);
+      // 1. Tenta carregar imediatamente dados locais em cache para não deixar a tela travada
       try {
-        // 1. Tenta API central na VPS
+        const local = await sendNativeMessage<any[]>("GET_RANKING");
+        if (isMounted && local && Array.isArray(local) && local.length > 0) {
+          const mapped: RankingUser[] = local.map((u, index) => ({
+            id: u.id ?? u.Id,
+            position: index + 1,
+            name: u.name || u.nome || u.Nome || "Participante",
+            points: u.points ?? u.pontos ?? u.Pontos ?? 0,
+            avatar: u.avatar || u.fotoUrl || u.FotoUrl || DEFAULT_AVATAR_URL,
+            curso: u.curso || u.Curso || u.department || "",
+          }));
+          setRanking(mapped);
+          setIsLoading(false);
+        }
+      } catch {}
+
+      // 2. Busca da API central na VPS para atualizar ranking global
+      try {
         const apiRank = await apiService.getLeaderboard();
         if (isMounted && apiRank && Array.isArray(apiRank) && apiRank.length > 0) {
           const mapped: RankingUser[] = apiRank.map((u: any, index: number) => ({
@@ -45,29 +61,9 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             curso: u.curso || u.Curso || u.department || "",
           }));
           setRanking(mapped);
-          setIsLoading(false);
-          return;
         }
       } catch (apiErr) {
-        console.warn("API VPS indisponível para ranking, tentando bridge nativa:", apiErr);
-      }
-
-      // 2. Fallback bridge nativa
-      try {
-        const users = await sendNativeMessage<any[]>("GET_RANKING");
-        if (isMounted && users && Array.isArray(users) && users.length > 0) {
-          const mapped: RankingUser[] = users.map((u, index) => ({
-            id: u.id ?? u.Id,
-            position: index + 1,
-            name: u.name || u.nome || u.Nome || "Participante",
-            points: u.points ?? u.pontos ?? u.Pontos ?? 0,
-            avatar: u.avatar || u.fotoUrl || u.FotoUrl || DEFAULT_AVATAR_URL,
-            curso: u.curso || u.Curso || u.department || "",
-          }));
-          setRanking(mapped);
-        }
-      } catch (err) {
-        console.warn("Erro ao carregar ranking nativo:", err);
+        console.warn("API VPS indisponível para ranking:", apiErr);
       } finally {
         if (isMounted) setIsLoading(false);
       }

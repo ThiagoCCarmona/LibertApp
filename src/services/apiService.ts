@@ -28,8 +28,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     ...(options.headers || {}),
   };
 
+  // Timeout de 2.5s para não prender a interface caso a VPS central esteja inacessível
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2500);
+
   try {
-    const res = await fetch(url, { ...options, headers });
+    const res = await fetch(url, { ...options, headers, signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!res.ok) {
       let errMsg = `Erro ${res.status}: ${res.statusText}`;
       try {
@@ -40,6 +45,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     }
     return await res.json();
   } catch (err: any) {
+    clearTimeout(timeoutId);
     console.warn(`[ApiService Error] Falha na chamada ${endpoint}:`, err);
     throw err;
   }

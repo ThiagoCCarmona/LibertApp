@@ -38,32 +38,28 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     let isMounted = true;
     async function fetchUsers() {
-      setIsLoading(true);
       const callerId = currentUser?.id || 1;
 
+      // 1. Tenta carregar imediatamente dados locais em cache para resposta instantânea
       try {
-        // 1. Tenta API central na VPS
-        const apiUsers = await apiService.searchUsers(searchTerm, callerId, filterFollowingOnly);
-        if (isMounted) {
-          setUsers(apiUsers || []);
-          setIsLoading(false);
-          return;
-        }
-      } catch (apiErr) {
-        console.warn("API VPS indisponível para busca, tentando bridge nativa:", apiErr);
-      }
-
-      // 2. Fallback bridge nativa
-      try {
-        const result = await sendNativeMessage<SearchableUser[]>("SEARCH_USERS", {
+        const local = await sendNativeMessage<SearchableUser[]>("SEARCH_USERS", {
           termo: searchTerm,
           apenasSeguindo: filterFollowingOnly,
         });
-        if (isMounted && result && Array.isArray(result)) {
-          setUsers(result);
+        if (isMounted && local && Array.isArray(local)) {
+          setUsers(local);
+          setIsLoading(false);
         }
-      } catch (err) {
-        console.warn("Erro ao buscar usuários nativos:", err);
+      } catch {}
+
+      // 2. Consulta API central na VPS para obter base completa e atualizada
+      try {
+        const apiUsers = await apiService.searchUsers(searchTerm, callerId, filterFollowingOnly);
+        if (isMounted && apiUsers) {
+          setUsers(apiUsers);
+        }
+      } catch (apiErr) {
+        console.warn("API VPS indisponível para busca:", apiErr);
       } finally {
         if (isMounted) setIsLoading(false);
       }
