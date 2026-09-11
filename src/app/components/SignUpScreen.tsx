@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { useState, useRef } from "react";
+import { Eye, EyeOff, Upload } from "lucide-react";
 import type { Screen } from "../App";
 import { libertAppLogo } from "../../assets/logo";
+import { DEFAULT_AVATARS, DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
 const LibertLogo = () => (
   <img
@@ -59,24 +60,16 @@ const Toggle = ({ checked, onChange, label, description }: { checked: boolean; o
 export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [curso, setCurso] = useState("");
   const [telefone, setTelefone] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmSenha, setConfirmSenha] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedAvatar, setSelectedAvatar] = useState("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&auto=format");
+  const [selectedAvatar, setSelectedAvatar] = useState(DEFAULT_AVATAR_URL);
+  const [customAvatarUploaded, setCustomAvatarUploaded] = useState(false);
   const [aceitaTermos, setAceitaTermos] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
-  const AVATAR_OPTIONS = [
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&auto=format",
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format",
-    "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&auto=format",
-    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format",
-    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&auto=format",
-    "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop&auto=format",
-  ];
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const formatPhone = (val: string) => {
     const digits = val.replace(/\D/g, "").slice(0, 11);
@@ -85,9 +78,35 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage("Por favor, selecione um arquivo de imagem válido.");
+      return;
+    }
+
+    // Limite de 3MB
+    if (file.size > 3 * 1024 * 1024) {
+      setErrorMessage("A imagem deve ter no máximo 3MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setSelectedAvatar(dataUrl);
+        setCustomAvatarUploaded(true);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleRegister = async () => {
-    if (!nome.trim() || !email.trim() || !senha.trim() || !curso.trim()) {
-      setErrorMessage("Por favor, preencha Nome, E-mail, Curso e Senha.");
+    if (!nome.trim() || !email.trim() || !senha.trim()) {
+      setErrorMessage("Por favor, preencha Nome, E-mail e Senha.");
       return;
     }
 
@@ -119,10 +138,10 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
         nome: nome.trim(),
         email: email.trim(),
         senha: senha.trim(),
-        curso: curso.trim(),
+        curso: "Estudante Carmelita",
         telefone: telefone.trim(),
         fotoUrl: selectedAvatar,
-        bio: `Estudante de ${curso.trim()} focado(a) em bem-estar e presença.`,
+        bio: "Membro da comunidade focado(a) em bem-estar e presença.",
       };
 
       // Tenta chamar a API central na VPS primeiro
@@ -156,10 +175,10 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
       <div className="flex flex-col items-center pt-6 pb-2 px-6">
         <LibertLogo />
         <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 26, color: "#2D3A2E", marginTop: 12, letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-          Cadastro Acadêmico
+          Cadastro na Comunidade
         </h1>
         <p style={{ color: "#7A8A7B", fontSize: 13, marginTop: 4, textAlign: "center", lineHeight: 1.4 }}>
-          Crie seu perfil oficial para a Feira Acadêmica Carmelita.
+          Crie seu perfil oficial para participar do evento e do ranking.
         </p>
       </div>
 
@@ -180,32 +199,93 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
         </div>
       )}
 
-      {/* Seletor de Foto de Perfil */}
+      {/* Seletor de Foto de Perfil & Upload */}
       <div className="px-6 pb-3 flex flex-col items-center">
         <p style={{ fontSize: 12, fontWeight: 600, color: "#7A8A7B", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          Escolha sua foto de perfil
+          Escolha um avatar ou envie sua foto
         </p>
-        <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, maxWidth: "100%" }}>
-          {AVATAR_OPTIONS.map((imgUrl, i) => (
-            <div
-              key={i}
-              onClick={() => setSelectedAvatar(imgUrl)}
+        
+        {/* Preview do avatar selecionado */}
+        <div style={{ position: "relative", marginBottom: 12 }}>
+          <div
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: "50%",
+              overflow: "hidden",
+              border: "3px solid #D68C70",
+              boxShadow: "0 4px 12px rgba(214,140,112,0.25)",
+              background: "#F5EFE3",
+            }}
+          >
+            <img src={selectedAvatar} alt="Avatar Escolhido" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            title="Fazer upload de foto"
+            aria-label="Fazer upload de foto de perfil"
+            style={{
+              position: "absolute",
+              bottom: -2,
+              right: -2,
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: "#2D3A2E",
+              color: "#FDFBF7",
+              border: "2px solid #FDFBF7",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >
+            <Upload size={14} />
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept="image/*"
+            style={{ display: "none" }}
+            aria-hidden="true"
+          />
+        </div>
+
+        {/* Lista de ícones padrão */}
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 6, maxWidth: "100%", alignItems: "center" }}>
+          {DEFAULT_AVATARS.map((av) => (
+            <button
+              key={av.id}
+              type="button"
+              onClick={() => {
+                setSelectedAvatar(av.url);
+                setCustomAvatarUploaded(false);
+              }}
+              title={av.name}
+              aria-label={av.name}
               style={{
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 borderRadius: "50%",
                 overflow: "hidden",
-                border: selectedAvatar === imgUrl ? "3px solid #D68C70" : "2px solid transparent",
+                border: !customAvatarUploaded && selectedAvatar === av.url ? "3px solid #D68C70" : "2px solid transparent",
                 cursor: "pointer",
                 flexShrink: 0,
-                transform: selectedAvatar === imgUrl ? "scale(1.08)" : "scale(1)",
+                transform: !customAvatarUploaded && selectedAvatar === av.url ? "scale(1.1)" : "scale(1)",
                 transition: "transform 0.15s ease, border 0.15s ease",
+                padding: 0,
+                background: "transparent",
               }}
             >
-              <img src={imgUrl} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            </div>
+              <img src={av.url} alt={av.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </button>
           ))}
         </div>
+        <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 4 }}>
+          Toque em um ícone ou no botão preto de câmera para enviar foto
+        </p>
       </div>
 
       <div className="flex flex-col gap-3.5 px-6 pb-4">
@@ -228,35 +308,18 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
 
         {/* E-mail */}
         <div className="flex flex-col gap-1">
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>E-mail acadêmico ou pessoal *</label>
+          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>E-mail *</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="carlos@aluno.carmelita.edu.br"
+            placeholder="seu.email@exemplo.com"
             style={{
               background: "#EDE7DA", border: "none", borderRadius: 12, padding: "12px 16px",
               fontSize: 14, color: "#2D3A2E", outline: "none", width: "100%",
               fontFamily: "'DM Sans', sans-serif",
             }}
             aria-label="E-mail"
-          />
-        </div>
-
-        {/* Curso / Departamento */}
-        <div className="flex flex-col gap-1">
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>Curso / Departamento *</label>
-          <input
-            type="text"
-            value={curso}
-            onChange={(e) => setCurso(e.target.value)}
-            placeholder="Ex: Engenharia de Software, Direito, Medicina..."
-            style={{
-              background: "#EDE7DA", border: "none", borderRadius: 12, padding: "12px 16px",
-              fontSize: 14, color: "#2D3A2E", outline: "none", width: "100%",
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-            aria-label="Curso ou Departamento"
           />
         </div>
 

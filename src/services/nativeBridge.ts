@@ -1,3 +1,5 @@
+import { DEFAULT_AVATAR_URL } from "../assets/defaultAvatars";
+
 /**
  * Ponte de comunicacao bidirecional com o backend C# (.NET MAUI HybridWebView).
  * Se o app estiver rodando fora do MAUI (navegador comum), opera com fallback seguro.
@@ -44,21 +46,8 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
       const users: any[] = usersJson ? JSON.parse(usersJson) : [];
 
       let found = users.find((u) => u.email?.toLowerCase() === email?.toLowerCase());
-      if (!found && email?.toLowerCase() === "silvia.mendes@email.com" && senha === "123456") {
-        found = {
-          id: 1,
-          nome: "Silvia Mendes",
-          email: "silvia.mendes@email.com",
-          pontos: 2450,
-          nivel: 3,
-          telefone: "(11) 98765-4321",
-          cpf: "123.456.789-00",
-          localizacao: "São Paulo, SP",
-          fotoUrl: "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=200&h=200&fit=crop&auto=format",
-        };
-      }
 
-      if (found && (!found.senha || found.senha === senha || senha === "123456")) {
+      if (found && (!found.senha || found.senha === senha)) {
         localStorage.setItem("currentUser", JSON.stringify(found));
         return found as T;
       }
@@ -66,7 +55,7 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
     }
 
     case "REGISTER_USER": {
-      const { nome, email, senha } = parsedPayload;
+      const { nome, email, senha, curso, telefone, fotoUrl, bio } = parsedPayload;
       const usersJson = localStorage.getItem("libertapp_users");
       const users: any[] = usersJson ? JSON.parse(usersJson) : [];
 
@@ -79,12 +68,15 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
         nome,
         email,
         senha,
+        curso: curso || "",
         pontos: 150,
         nivel: 1,
-        telefone: "",
+        telefone: telefone || "",
         cpf: "",
         localizacao: "Comunidade Carmelita",
-        fotoUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&auto=format",
+        fotoUrl: fotoUrl || DEFAULT_AVATAR_URL,
+        bio: bio || "Comprometido(a) com a saúde mental e momentos de foco.",
+        numeroCarteira: `LBT-2026-${1000 + (users.length + 1)}`,
       };
 
       users.push(newUser);
@@ -98,19 +90,7 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
       if (currentJson) {
         return JSON.parse(currentJson) as T;
       }
-      const defaultUser = {
-        id: 1,
-        nome: "Silvia Mendes",
-        email: "silvia.mendes@email.com",
-        pontos: 2450,
-        nivel: 3,
-        telefone: "(11) 98765-4321",
-        cpf: "123.456.789-00",
-        localizacao: "São Paulo, SP",
-        fotoUrl: "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=200&h=200&fit=crop&auto=format",
-      };
-      localStorage.setItem("currentUser", JSON.stringify(defaultUser));
-      return defaultUser as T;
+      return null;
     }
 
     case "UPDATE_PROFILE": {
@@ -128,19 +108,42 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
       return updated as T;
     }
 
-    case "GET_FEED": {
-      const feedJson = localStorage.getItem("libertapp_feed");
-      if (feedJson) {
-        return JSON.parse(feedJson) as T;
+    case "GET_RANKING": {
+      const usersJson = localStorage.getItem("libertapp_users");
+      const users: any[] = usersJson ? JSON.parse(usersJson) : [];
+      const currentJson = localStorage.getItem("currentUser");
+      if (currentJson) {
+        const cur = JSON.parse(currentJson);
+        if (!users.some((u) => u.id === cur.id || u.email === cur.email)) {
+          users.push(cur);
+        }
       }
-      return null;
+      users.sort((a, b) => (b.pontos || 0) - (a.pontos || 0));
+      return users.map((u, i) => ({
+        id: u.id,
+        position: i + 1,
+        nome: u.nome,
+        name: u.nome,
+        pontos: u.pontos || 0,
+        points: u.pontos || 0,
+        fotoUrl: u.fotoUrl || DEFAULT_AVATAR_URL,
+        avatar: u.fotoUrl || DEFAULT_AVATAR_URL,
+        curso: u.curso || "",
+        department: u.curso || "",
+        level: u.nivel || 1,
+      })) as T;
+    }
+
+    case "GET_POSTS": {
+      const postsJson = localStorage.getItem("libertapp_posts");
+      return (postsJson ? JSON.parse(postsJson) : []) as T;
     }
 
     case "CREATE_POST": {
-      const feedJson = localStorage.getItem("libertapp_feed");
-      const feed: any[] = feedJson ? JSON.parse(feedJson) : [];
       const currentJson = localStorage.getItem("currentUser");
       const currentUser = currentJson ? JSON.parse(currentJson) : null;
+      const postsJson = localStorage.getItem("libertapp_posts");
+      const posts: any[] = postsJson ? JSON.parse(postsJson) : [];
 
       const bgColors: Record<string, { bg: string; border: string }> = {
         nature: { bg: "#E8D7C8", border: "#D7C4B3" },
@@ -154,7 +157,7 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
         id: Date.now(),
         type: parsedPayload.category,
         author: currentUser?.nome || "Você",
-        avatar: currentUser?.fotoUrl || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+        avatar: currentUser?.fotoUrl || DEFAULT_AVATAR_URL,
         time: "Agora",
         content: parsedPayload.content,
         image: parsedPayload.image,
@@ -209,7 +212,7 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
         id: Date.now(),
         postId: parsedPayload.postId,
         autorNome: currentUser?.nome || "Você",
-        autorAvatar: currentUser?.fotoUrl || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+        autorAvatar: currentUser?.fotoUrl || DEFAULT_AVATAR_URL,
         texto: parsedPayload.texto,
         likes: 0,
       };

@@ -4,6 +4,8 @@ import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
 import { sendNativeMessage } from "../../services/nativeBridge";
 import { apiService } from "../../services/apiService";
 
+import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
+
 export interface RankingUser {
   id?: number;
   position: number;
@@ -35,12 +37,12 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
         const apiRank = await apiService.getLeaderboard();
         if (isMounted && apiRank && Array.isArray(apiRank) && apiRank.length > 0) {
           const mapped: RankingUser[] = apiRank.map((u: any, index: number) => ({
-            id: u.id,
+            id: u.id ?? u.Id,
             position: index + 1,
-            name: u.nome || "Membro",
-            points: u.pontos || 0,
-            avatar: u.fotoUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-            curso: u.curso,
+            name: u.name || u.nome || u.Nome || "Participante",
+            points: u.points ?? u.pontos ?? u.Pontos ?? 0,
+            avatar: u.avatar || u.fotoUrl || u.FotoUrl || DEFAULT_AVATAR_URL,
+            curso: u.curso || u.Curso || u.department || "",
           }));
           setRanking(mapped);
           setIsLoading(false);
@@ -55,12 +57,12 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
         const users = await sendNativeMessage<any[]>("GET_RANKING");
         if (isMounted && users && Array.isArray(users) && users.length > 0) {
           const mapped: RankingUser[] = users.map((u, index) => ({
-            id: u.id || u.Id,
+            id: u.id ?? u.Id,
             position: index + 1,
-            name: u.nome || u.Nome || "Membro",
-            points: u.pontos || u.Pontos || 0,
-            avatar: u.fotoUrl || u.FotoUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-            curso: u.curso || u.Curso,
+            name: u.name || u.nome || u.Nome || "Participante",
+            points: u.points ?? u.pontos ?? u.Pontos ?? 0,
+            avatar: u.avatar || u.fotoUrl || u.FotoUrl || DEFAULT_AVATAR_URL,
+            curso: u.curso || u.Curso || u.department || "",
           }));
           setRanking(mapped);
         }

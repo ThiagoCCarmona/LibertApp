@@ -28,10 +28,15 @@ public class LeaderboardController : ControllerBase
             position = index + 1,
             id = u.Id,
             name = u.Nome,
+            nome = u.Nome,
             avatar = u.FotoUrl,
+            fotoUrl = u.FotoUrl,
             department = !string.IsNullOrEmpty(u.Curso) ? u.Curso : u.Localizacao,
+            curso = u.Curso,
             points = u.Pontos,
-            level = u.Nivel
+            pontos = u.Pontos,
+            level = u.Nivel,
+            nivel = u.Nivel
         });
 
         return Ok(result);

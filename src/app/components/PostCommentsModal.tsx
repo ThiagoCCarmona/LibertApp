@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Send, Heart } from "lucide-react";
 import { sendNativeMessage } from "../../services/nativeBridge";
+import { DEFAULT_AVATARS, DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
 export interface CommentItem {
   id: number;
@@ -9,6 +10,7 @@ export interface CommentItem {
   text: string;
   time: string;
   likes: number;
+  liked?: boolean;
 }
 
 interface PostCommentsModalProps {
@@ -25,16 +27,16 @@ const DEFAULT_COMMENTS: CommentItem[] = [
   {
     id: 1,
     author: "Lucas Silveira",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-    text: "Muito inspirador! Também fiz 30 minutos de caminhada sem celular hoje.",
+    avatar: DEFAULT_AVATARS[1].url,
+    text: "Muito inspirador! Também fiz 30 minutos de foco sem celular hoje.",
     time: "45m atrás",
     likes: 3,
   },
   {
     id: 2,
     author: "Beatriz Santos",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
-    text: "Parabéns pela constância! Isso realmente faz a diferença na semana.",
+    avatar: DEFAULT_AVATARS[2].url,
+    text: "Parabéns pela constância! Isso realmente faz a diferença.",
     time: "20m atrás",
     likes: 1,
   },
@@ -63,7 +65,7 @@ export function PostCommentsModal({
           const mapped: CommentItem[] = data.map((c) => ({
             id: c.id || c.Id,
             author: c.autorNome || c.AutorNome || c.author || "Membro da Comunidade",
-            avatar: c.autorAvatar || c.AutorAvatar || c.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
+            avatar: c.autorAvatar || c.AutorAvatar || c.avatar || DEFAULT_AVATAR_URL,
             text: c.texto || c.Texto || c.text || "",
             time: "Recente",
             likes: c.likes || c.Likes || 0,
@@ -88,10 +90,16 @@ export function PostCommentsModal({
     const text = newCommentText.trim();
     if (!text) return;
 
+    let cur: any = null;
+    try {
+      const s = localStorage.getItem("currentUser");
+      if (s) cur = JSON.parse(s);
+    } catch {}
+
     const newComment: CommentItem = {
       id: Date.now(),
-      author: "Você",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+      author: cur?.nome || "Você",
+      avatar: cur?.fotoUrl || DEFAULT_AVATAR_URL,
       text,
       time: "Agora",
       likes: 0,

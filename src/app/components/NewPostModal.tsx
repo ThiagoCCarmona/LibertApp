@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { X, Image as ImageIcon, Sparkles } from "lucide-react";
+import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
 interface NewPostModalProps {
   isOpen: boolean;
@@ -119,27 +120,38 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
         </div>
 
         {/* Autor info */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: "50%",
-              overflow: "hidden",
-              border: "2px solid #D68C70",
-            }}
-          >
-            <img
-              src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"
-              alt="Seu avatar"
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          </div>
-          <div>
-            <p style={{ fontSize: 14, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>Silvia Mendes</p>
-            <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>Compartilhando com a comunidade</p>
-          </div>
-        </div>
+        {(() => {
+          let cur: any = null;
+          try {
+            const s = localStorage.getItem("currentUser");
+            if (s) cur = JSON.parse(s);
+          } catch {}
+          const name = cur?.nome || "Você";
+          const avatar = cur?.fotoUrl || DEFAULT_AVATAR_URL;
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "2px solid #D68C70",
+                }}
+              >
+                <img
+                  src={avatar}
+                  alt="Seu avatar"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>{name}</p>
+                <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>Compartilhando com a comunidade</p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Text Input */}
         <textarea

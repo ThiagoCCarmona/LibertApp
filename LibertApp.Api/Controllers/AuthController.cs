@@ -47,7 +47,7 @@ public class AuthController : ControllerBase
             Localizacao = "Comunidade Carmelita",
             FotoUrl = !string.IsNullOrEmpty(request.FotoUrl)
                 ? request.FotoUrl
-                : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&auto=format",
+                : "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22128%22%20height%3D%22128%22%20viewBox%3D%220%200%20128%20128%22%3E%3Crect%20width%3D%22128%22%20height%3D%22128%22%20rx%3D%2264%22%20fill%3D%22%23E8F0E8%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2254%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2264%22%20font-family%3D%22-apple-system%2C%20BlinkMacSystemFont%2C%20sans-serif%22%3E%F0%9F%8C%B1%3C%2Ftext%3E%3C%2Fsvg%3E",
             Pontos = 150,
             Nivel = 1,
             DataCriacao = DateTime.UtcNow

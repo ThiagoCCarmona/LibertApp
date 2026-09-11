@@ -5,6 +5,7 @@ import { PostCommentsModal } from "./PostCommentsModal";
 import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
 import { sendNativeMessage } from "../../services/nativeBridge";
 import { apiService, type PostDto } from "../../services/apiService";
+import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
 const LibertLogoSmall = () => (
   <svg width="24" height="24" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -143,8 +144,8 @@ export function HomeNewScreen({
     const fallbackPost = {
       id: Date.now(),
       type: newPostData.category,
-      author: currentUser?.nome || "Silvia Mendes",
-      avatar: currentUser?.fotoUrl || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+      author: currentUser?.nome || "Você",
+      avatar: currentUser?.fotoUrl || DEFAULT_AVATAR_URL,
       time: "Agora",
       content: newPostData.content,
       image: newPostData.image,
@@ -230,7 +231,7 @@ export function HomeNewScreen({
 
   const displayName = currentUser?.nome?.split(" ")[0] || "Estudante";
   const displayFullName = currentUser?.nome || "Estudante Carmelita";
-  const displayAvatar = currentUser?.fotoUrl || "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=200&h=200&fit=crop&auto=format";
+  const displayAvatar = currentUser?.fotoUrl || DEFAULT_AVATAR_URL;
   const displayPoints = currentUser?.pontos ?? 0;
   const userCardCode = currentUser?.numeroCarteira || (currentUser?.id ? `LBT-2026-${String(currentUser.id).padStart(4, "0")}` : "LBT-2026-0001");
 

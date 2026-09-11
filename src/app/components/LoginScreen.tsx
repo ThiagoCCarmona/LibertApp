@@ -29,8 +29,8 @@ const AppleIcon = () => (
 );
 
 export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const [email, setEmail] = useState("silvia.mendes@email.com");
-  const [senha, setSenha] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -109,7 +109,7 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="silvia.mendes@email.com"
+            placeholder="seu.email@exemplo.com"
             style={{
               background: "#EDE7DA", border: "none", borderRadius: 12, padding: "14px 16px",
               fontSize: 15, color: "#2D3A2E", outline: "none", width: "100%",

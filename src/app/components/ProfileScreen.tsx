@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Bell, Moon, Smartphone, LogOut } from "lucide-react";
 import { sendNativeMessage } from "../../services/nativeBridge";
+import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
 const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean; onChange: (val: boolean) => void }) => (
   <button
@@ -128,7 +129,7 @@ export function ProfileScreen({
   }, []);
 
   const displayName = currentUser?.nome || "Estudante Carmelita";
-  const displayAvatar = currentUser?.fotoUrl || "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=200&h=200&fit=crop&auto=format";
+  const displayAvatar = currentUser?.fotoUrl || DEFAULT_AVATAR_URL;
   const displayEmailOrDate = currentUser?.curso
     ? `${currentUser.curso} • ${currentUser.email}`
     : (currentUser?.email || "Membro da Comunidade Carmelita");

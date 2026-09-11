@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { sendNativeMessage } from "../../services/nativeBridge";
+import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
 // Simple QR Code SVG - stylized representation
 const StylizedQRCode = ({ code }: { code: string }) => (
@@ -60,12 +61,16 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("currentUser");
-      if (stored) setCurrentUser(JSON.parse(stored));
-    } catch {}
+    // 1. Tenta carregar do localStorage
+    const cached = localStorage.getItem("currentUser");
+    if (cached) {
+      try {
+        setCurrentUser(JSON.parse(cached));
+      } catch {}
+    }
 
-    sendNativeMessage("GET_CURRENT_USER")
+    // 2. Tenta sincronizar com bridge nativa / backend
+    sendNativeMessage<any>("GET_CURRENT_USER")
       .then((u) => {
         if (u) setCurrentUser(u);
       })
@@ -73,7 +78,7 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
   }, []);
 
   const displayName = currentUser?.nome || "Estudante Carmelita";
-  const displayAvatar = currentUser?.fotoUrl || "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=200&h=200&fit=crop&auto=format";
+  const displayAvatar = currentUser?.fotoUrl || DEFAULT_AVATAR_URL;
   const displayCurso = currentUser?.curso || "Graduação Carmelita";
   const cardCode = currentUser?.numeroCarteira || (currentUser?.id ? `LBT-2026-${String(currentUser.id).padStart(4, "0")}` : "LBT-2026-0001");
   const displayLevel = currentUser?.nivel || Math.max(1, Math.floor((currentUser?.pontos || 0) / 500) + 1);
