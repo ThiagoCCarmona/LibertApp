@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, Search, UserPlus, UserCheck, Trophy, Sparkles, Filter } from "lucide-react";
 import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
 import { UnfollowConfirmModal } from "./UnfollowConfirmModal";
+import { sendNativeMessage } from "../../services/nativeBridge";
 
 export interface SearchableUser {
   id: number;
@@ -131,7 +132,28 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
   const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
   const [userToUnfollow, setUserToUnfollow] = useState<SearchableUser | null>(null);
 
-  const handleFollowClick = (user: SearchableUser) => {
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchUsers() {
+      try {
+        const result = await sendNativeMessage<SearchableUser[]>("SEARCH_USERS", {
+          termo: searchTerm,
+          apenasSeguindo: filterFollowingOnly,
+        });
+        if (isMounted && result && Array.isArray(result) && result.length > 0) {
+          setUsers(result);
+        }
+      } catch (err) {
+        console.warn("Erro ao buscar usuários nativos:", err);
+      }
+    }
+    fetchUsers();
+    return () => {
+      isMounted = false;
+    };
+  }, [searchTerm, filterFollowingOnly]);
+
+  const handleFollowClick = async (user: SearchableUser) => {
     if (user.isFollowing) {
       // Solicita confirmação antes de deixar de seguir
       setUserToUnfollow(user);
@@ -140,15 +162,26 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
       setUsers((prev) =>
         prev.map((u) => (u.id === user.id ? { ...u, isFollowing: true } : u))
       );
+      try {
+        await sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: user.id });
+      } catch (err) {
+        console.warn("Erro ao seguir usuário:", err);
+      }
     }
   };
 
-  const handleConfirmUnfollow = () => {
+  const handleConfirmUnfollow = async () => {
     if (userToUnfollow) {
+      const userId = userToUnfollow.id;
       setUsers((prev) =>
-        prev.map((u) => (u.id === userToUnfollow.id ? { ...u, isFollowing: false } : u))
+        prev.map((u) => (u.id === userId ? { ...u, isFollowing: false } : u))
       );
       setUserToUnfollow(null);
+      try {
+        await sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: userId });
+      } catch (err) {
+        console.warn("Erro ao deixar de seguir usuário:", err);
+      }
     }
   };
 
@@ -450,6 +483,7 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
             setUsers((prev) =>
               prev.map((u) => (u.id === userId ? { ...u, isFollowing: nextState } : u))
             );
+            sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: userId }).catch(console.warn);
           }
         }}
       />

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Share2, Plus, Trophy, UserPlus } from "lucide-react";
 import { NewPostModal } from "./NewPostModal";
 import { PostCommentsModal } from "./PostCommentsModal";
 import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
+import { sendNativeMessage } from "../../services/nativeBridge";
 
 const LibertLogoSmall = () => (
   <svg width="24" height="24" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -68,6 +69,7 @@ export function HomeNewScreen({
   onSearchUsers?: () => void;
 }) {
   const [posts, setPosts] = useState(INITIAL_FEED_POSTS);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [isNewPostOpen, setIsNewPostOpen] = useState(false);
   const [activeCommentsPost, setActiveCommentsPost] = useState<(typeof INITIAL_FEED_POSTS)[0] | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
@@ -76,7 +78,39 @@ export function HomeNewScreen({
   const totalCount = 5;
   const progress = (unlockedCount / totalCount) * 100;
 
-  const handleToggleLike = (postId: number) => {
+  // Carrega feed e usuário da ponte C# / SQLite
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      try {
+        const [feedData, userData] = await Promise.all([
+          sendNativeMessage<any[]>("GET_FEED"),
+          sendNativeMessage<any>("GET_CURRENT_USER"),
+        ]);
+
+        if (isMounted) {
+          if (feedData && Array.isArray(feedData) && feedData.length > 0) {
+            setPosts(feedData);
+          }
+          if (userData) {
+            setCurrentUser(userData);
+          }
+        }
+      } catch (err) {
+        console.warn("Erro ao carregar dados nativos do feed:", err);
+      }
+    }
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleToggleLike = async (postId: number) => {
+    // Atualização otimista na interface
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
@@ -84,15 +118,21 @@ export function HomeNewScreen({
           return {
             ...p,
             liked: newLiked,
-            likes: newLiked ? p.likes + 1 : p.likes - 1,
+            likes: newLiked ? p.likes + 1 : Math.max(0, p.likes - 1),
           };
         }
         return p;
       })
     );
+
+    try {
+      await sendNativeMessage("LIKE_POST", { postId });
+    } catch (err) {
+      console.warn("Erro ao curtir post no C#:", err);
+    }
   };
 
-  const handlePublishPost = (newPostData: {
+  const handlePublishPost = async (newPostData: {
     content: string;
     category: string;
     icon: string;
@@ -107,11 +147,11 @@ export function HomeNewScreen({
 
     const scheme = bgColors[newPostData.category] || { bg: "#F5EFE3", border: "#EDE7DA" };
 
-    const createdPost = {
+    const fallbackPost = {
       id: Date.now(),
       type: newPostData.category,
-      author: "Silvia Mendes",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
+      author: currentUser?.nome || "Silvia Mendes",
+      avatar: currentUser?.fotoUrl || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
       time: "Agora",
       content: newPostData.content,
       image: newPostData.image,
@@ -123,11 +163,29 @@ export function HomeNewScreen({
       icon: newPostData.icon,
     };
 
-    setPosts([createdPost, ...posts]);
+    try {
+      const nativePost = await sendNativeMessage("CREATE_POST", {
+        content: newPostData.content,
+        category: newPostData.category,
+        icon: newPostData.icon,
+        image: newPostData.image,
+      });
+
+      if (nativePost) {
+        setPosts((prev) => [nativePost, ...prev]);
+        return;
+      }
+    } catch (err) {
+      console.warn("Erro ao criar post via bridge nativa:", err);
+    }
+
+    // Fallback se bridge não responder
+    setPosts((prev) => [fallbackPost, ...prev]);
   };
 
-  const handleOpenUserProfile = (author: string, avatar: string) => {
+  const handleOpenUserProfile = (author: string, avatar: string, postObj?: any) => {
     setSelectedUser({
+      id: postObj?.usuarioId,
       name: author,
       avatar: avatar,
       level: 3,
@@ -137,8 +195,14 @@ export function HomeNewScreen({
       focusMinutes: 180,
       bio: "Adoro caminhar sem fones e praticar momentos de presença plena durante a semana.",
       department: "Membro da Comunidade Carmelita",
+      isFollowing: false,
     });
   };
+
+  const displayName = currentUser?.nome?.split(" ")[0] || "Silvia";
+  const displayFullName = currentUser?.nome || "Silvia Mendes";
+  const displayAvatar = currentUser?.fotoUrl || "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=200&h=200&fit=crop&auto=format";
+  const displayPoints = currentUser?.pontos ?? 2450;
 
   return (
     <div className="flex flex-col h-full bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -147,9 +211,9 @@ export function HomeNewScreen({
         {/* Header */}
         <div className="px-6 pt-4 pb-3 flex items-center justify-between">
           <div>
-            <p style={{ fontSize: 13, color: "#7A8A7B", fontWeight: 400 }}>Bem-vinda,</p>
+            <p style={{ fontSize: 13, color: "#7A8A7B", fontWeight: 400 }}>Bem-vindo(a),</p>
             <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", lineHeight: 1.2, marginTop: 1 }}>
-              Silvia 👋
+              {displayName} 👋
             </h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -230,8 +294,8 @@ export function HomeNewScreen({
                   boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
                 }}>
                   <img
-                    src="https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=200&h=200&fit=crop&auto=format"
-                    alt="Foto de Silvia Mendes"
+                    src={displayAvatar}
+                    alt={`Foto de ${displayFullName}`}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   />
                 </div>
@@ -240,10 +304,10 @@ export function HomeNewScreen({
                     fontFamily: "'Fraunces', serif", fontWeight: 400, fontSize: 20,
                     color: "#FDFBF7", lineHeight: 1.1, letterSpacing: "-0.3px",
                   }}>
-                    Silvia Mendes
+                    {displayFullName}
                   </h2>
                   <p style={{ fontSize: 12, color: "rgba(253,251,247,0.55)", marginTop: 3, fontWeight: 400 }}>
-                    LB-2024-4892
+                    {currentUser?.id ? `LB-2024-${1000 + currentUser.id}` : "LB-2024-4892"}
                   </p>
                 </div>
               </div>
@@ -288,7 +352,7 @@ export function HomeNewScreen({
               }}
             >
               <div
-                onClick={() => handleOpenUserProfile(post.author, post.avatar)}
+                onClick={() => handleOpenUserProfile(post.author, post.avatar, post)}
                 style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer" }}
               >
                 <div
@@ -416,6 +480,7 @@ export function HomeNewScreen({
       <PostCommentsModal
         isOpen={activeCommentsPost !== null}
         onClose={() => setActiveCommentsPost(null)}
+        postId={activeCommentsPost?.id}
         postAuthor={activeCommentsPost?.author || ""}
         postContent={activeCommentsPost?.content || ""}
         onAddComment={() => {

@@ -57,9 +57,45 @@ const Toggle = ({ checked, onChange, label, description }: { checked: boolean; o
 );
 
 export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [simpleMode, setSimpleMode] = useState(false);
   const [gentleNotifs, setGentleNotifs] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleRegister = async () => {
+    if (!nome.trim() || !email.trim() || !senha.trim()) {
+      setErrorMessage("Preencha todos os campos.");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const { sendNativeMessage } = await import("../../services/nativeBridge");
+      const user = await sendNativeMessage("REGISTER_USER", {
+        nome: nome.trim(),
+        email: email.trim(),
+        senha: senha.trim(),
+      });
+
+      if (user) {
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("currentUser", JSON.stringify(user));
+        onNavigate("home");
+      } else {
+        onNavigate("home");
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Erro ao criar conta. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-background overflow-y-auto" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -73,11 +109,30 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
         </p>
       </div>
 
+      {errorMessage && (
+        <div className="px-6 mb-3">
+          <div
+            style={{
+              background: "rgba(224, 109, 83, 0.12)",
+              border: "1px solid #E06D53",
+              borderRadius: 12,
+              padding: "10px 14px",
+              color: "#C44F35",
+              fontSize: 13,
+            }}
+          >
+            {errorMessage}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 px-6 pb-4">
         <div className="flex flex-col gap-1.5">
           <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>Nome completo</label>
           <input
             type="text"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
             placeholder="Silvia Mendes"
             style={{
               background: "#EDE7DA", border: "none", borderRadius: 12, padding: "14px 16px",
@@ -92,6 +147,8 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
           <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>E-mail</label>
           <input
             type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             placeholder="silvia@exemplo.com.br"
             style={{
               background: "#EDE7DA", border: "none", borderRadius: 12, padding: "14px 16px",
@@ -107,7 +164,9 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="Mínimo 8 caracteres"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              placeholder="Mínimo 6 caracteres"
               style={{
                 background: "#EDE7DA", border: "none", borderRadius: 12, padding: "14px 48px 14px 16px",
                 fontSize: 15, color: "#2D3A2E", outline: "none", width: "100%",
@@ -151,17 +210,18 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
 
       <div className="px-6 pb-4 mt-auto">
         <button
-          onClick={() => onNavigate("home")}
+          onClick={handleRegister}
+          disabled={isLoading}
           style={{
-            width: "100%", background: "#D68C70", color: "#FDFBF7", border: "none",
+            width: "100%", background: isLoading ? "#C4B89A" : "#D68C70", color: "#FDFBF7", border: "none",
             borderRadius: 14, padding: "16px", fontSize: 16, fontWeight: 600,
-            cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+            cursor: isLoading ? "default" : "pointer", fontFamily: "'DM Sans', sans-serif",
             boxShadow: "0 4px 16px rgba(214,140,112,0.35)",
             transition: "opacity 0.15s",
           }}
           aria-label="Criar conta"
         >
-          Criar conta
+          {isLoading ? "Criando conta..." : "Criar conta"}
         </button>
 
         <p style={{ textAlign: "center", color: "#7A8A7B", fontSize: 14, marginTop: 16 }}>

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
+import { sendNativeMessage } from "../../services/nativeBridge";
 
 export function EditProfileScreen({ onBack }: { onBack: () => void }) {
   const [formData, setFormData] = useState({
@@ -11,6 +12,30 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
   });
 
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadUser() {
+      try {
+        const u = await sendNativeMessage<any>("GET_CURRENT_USER");
+        if (isMounted && u) {
+          setFormData({
+            fullName: u.nome || u.Nome || "Silvia Mendes",
+            email: u.email || u.Email || "silvia.mendes@email.com",
+            phone: u.telefone || u.Telefone || "(11) 98765-4321",
+            cpf: u.cpf || u.Cpf || "123.456.789-00",
+            location: u.localizacao || u.Localizacao || "São Paulo, SP",
+          });
+        }
+      } catch (err) {
+        console.warn("Erro ao carregar usuário em EditProfileScreen:", err);
+      }
+    }
+    loadUser();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -45,7 +70,19 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
     return value;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    try {
+      await sendNativeMessage("UPDATE_PROFILE", {
+        nome: formData.fullName,
+        email: formData.email,
+        telefone: formData.phone,
+        cpf: formData.cpf,
+        localizacao: formData.location,
+      });
+    } catch (err) {
+      console.warn("Erro ao atualizar perfil no backend:", err);
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

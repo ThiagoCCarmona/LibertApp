@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Play, Pause, Settings, CheckCircle2, Circle } from "lucide-react";
+import { sendNativeMessage } from "../../services/nativeBridge";
 
 type PomodoroMode = "focus" | "short-break" | "long-break";
 type ChallengeTab = "daily" | "weekly" | "monthly";
@@ -35,18 +36,56 @@ export function ActivitiesScreen() {
   const [challengeTab, setChallengeTab] = React.useState<ChallengeTab>("daily");
   const [challenges, setChallenges] = React.useState(challengeData);
 
+  // Carrega desafios persistidos do C# / SQLite
+  React.useEffect(() => {
+    let isMounted = true;
+    async function loadDesafios() {
+      try {
+        const nativeDesafios = await sendNativeMessage<any[]>("GET_DESAFIOS");
+        if (isMounted && nativeDesafios && Array.isArray(nativeDesafios) && nativeDesafios.length > 0) {
+          // Organiza por categoria se houver correspondência
+          const daily = nativeDesafios
+            .filter((d) => (d.categoria || d.Categoria || "daily").toLowerCase() === "daily")
+            .map((d) => ({
+              id: d.id || d.Id,
+              title: d.titulo || d.Titulo,
+              completed: !!(d.completed || d.Completed),
+            }));
+
+          if (daily.length > 0) {
+            setChallenges((prev) => ({
+              ...prev,
+              daily,
+            }));
+          }
+        }
+      } catch (err) {
+        console.warn("Erro ao carregar desafios do backend:", err);
+      }
+    }
+    loadDesafios();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Timer interval
   React.useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
+        setTimeLeft((prev) => prev - 1);
       }, 1000);
     } else if (timeLeft === 0 && isRunning) {
       setIsRunning(false);
+      // Registra sessão concluída no backend C# e bonifica o usuário
+      sendNativeMessage("RECORD_POMODORO", {
+        tipo: mode,
+        minutos: modeConfig[mode].minutes,
+      }).catch((err) => console.warn("Erro ao registrar pomodoro:", err));
     }
     return () => clearInterval(interval);
-  }, [isRunning, timeLeft]);
+  }, [isRunning, timeLeft, mode]);
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
@@ -56,13 +95,19 @@ export function ActivitiesScreen() {
   const todayGoal = 4;
   const todayCompleted = 2;
 
-  const handleChallengeToggle = (id: number) => {
-    setChallenges(prev => ({
+  const handleChallengeToggle = async (id: number) => {
+    setChallenges((prev) => ({
       ...prev,
-      [challengeTab]: prev[challengeTab].map(c => 
+      [challengeTab]: prev[challengeTab].map((c) =>
         c.id === id ? { ...c, completed: !c.completed } : c
       ),
     }));
+
+    try {
+      await sendNativeMessage("TOGGLE_DESAFIO", id.toString());
+    } catch (err) {
+      console.warn("Erro ao alterar desafio:", err);
+    }
   };
 
   return (

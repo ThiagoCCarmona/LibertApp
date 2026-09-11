@@ -35,7 +35,7 @@ export function isMauiHybrid(): boolean {
  * Envia uma mensagem com acao e payload tipado para o backend C#
  */
 export async function sendNativeMessage<T = any>(action: string, payload?: any): Promise<T | null> {
-  const callbackId = cb__;
+  const callbackId = `cb_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
   if (isMauiHybrid()) {
     return new Promise((resolve, reject) => {
@@ -43,7 +43,7 @@ export async function sendNativeMessage<T = any>(action: string, payload?: any):
         if (response.success) {
           resolve(response.data as T);
         } else {
-          console.warn([NativeBridge Error] );
+          console.warn(`[NativeBridge Error] ${response.error}`);
           reject(new Error(response.error || 'Erro nativo'));
         }
       });
@@ -64,5 +64,6 @@ export async function sendNativeMessage<T = any>(action: string, payload?: any):
   }
 
   // Fallback de desenvolvimento no navegador
+  console.log(`[NativeBridge WebFallback] Action: ${action}`, payload);
   return null;
 }

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Bell, Moon, Smartphone, LogOut } from "lucide-react";
+import { sendNativeMessage } from "../../services/nativeBridge";
 
 const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean; onChange: (val: boolean) => void }) => (
   <button
@@ -66,10 +67,33 @@ export function ProfileScreen({
   onShowBenefits?: () => void;
   onLogout?: () => void;
 }) {
+  const [currentUser, setCurrentUser] = React.useState<any>(null);
   const [breathingReminders, setBreathingReminders] = React.useState(true);
   const [nightMode, setNightMode] = React.useState(false);
   const [screenTimeLimit, setScreenTimeLimit] = React.useState(true);
   const [dailyLimit, setDailyLimit] = React.useState(5);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    async function loadUser() {
+      try {
+        const u = await sendNativeMessage("GET_CURRENT_USER");
+        if (isMounted && u) {
+          setCurrentUser(u);
+        }
+      } catch (err) {
+        console.warn("Erro ao carregar usuário em ProfileScreen:", err);
+      }
+    }
+    loadUser();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const displayName = currentUser?.nome || "Silvia Mendes";
+  const displayAvatar = currentUser?.fotoUrl || "https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=200&h=200&fit=crop&auto=format";
+  const displayEmailOrDate = currentUser?.email || "12/04/1992";
 
   return (
     <div className="flex flex-col h-full bg-background" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -87,16 +111,16 @@ export function ProfileScreen({
               flexShrink: 0,
             }}>
               <img
-                src="https://images.unsplash.com/photo-1525134479668-1bee5c7c6845?w=200&h=200&fit=crop&auto=format"
-                alt="Foto de Silvia Mendes"
+                src={displayAvatar}
+                alt={`Foto de ${displayName}`}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             </div>
             <div style={{ flex: 1 }}>
               <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E" }}>
-                Silvia Mendes
+                {displayName}
               </h1>
-              <p style={{ fontSize: 13, color: "#7A8A7B", marginTop: 2 }}>12/04/1992</p>
+              <p style={{ fontSize: 13, color: "#7A8A7B", marginTop: 2 }}>{displayEmailOrDate}</p>
             </div>
           </div>
         </div>

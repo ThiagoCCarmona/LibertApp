@@ -11,6 +11,8 @@ public class AppDbContext : DbContext
     public DbSet<UsuarioDesafio> UsuariosDesafios => Set<UsuarioDesafio>();
     public DbSet<ParceiroBeneficio> ParceirosBeneficios => Set<ParceiroBeneficio>();
     public DbSet<FeedPost> FeedPosts => Set<FeedPost>();
+    public DbSet<PostComentario> PostComentarios => Set<PostComentario>();
+    public DbSet<UsuarioSeguidor> UsuarioSeguidores => Set<UsuarioSeguidor>();
 
     public AppDbContext()
     {

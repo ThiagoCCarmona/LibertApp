@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Send, Heart } from "lucide-react";
+import { sendNativeMessage } from "../../services/nativeBridge";
 
 export interface CommentItem {
   id: number;
@@ -13,6 +14,7 @@ export interface CommentItem {
 interface PostCommentsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  postId?: number;
   postAuthor: string;
   postContent: string;
   initialComments?: CommentItem[];
@@ -41,6 +43,7 @@ const DEFAULT_COMMENTS: CommentItem[] = [
 export function PostCommentsModal({
   isOpen,
   onClose,
+  postId,
   postAuthor,
   postContent,
   initialComments = DEFAULT_COMMENTS,
@@ -49,25 +52,73 @@ export function PostCommentsModal({
   const [comments, setComments] = useState<CommentItem[]>(initialComments);
   const [newCommentText, setNewCommentText] = useState("");
 
+  useEffect(() => {
+    if (!isOpen || !postId) return;
+
+    let isMounted = true;
+    async function loadComments() {
+      try {
+        const data = await sendNativeMessage<any[]>("GET_COMMENTS", { postId });
+        if (isMounted && data && Array.isArray(data) && data.length > 0) {
+          const mapped: CommentItem[] = data.map((c) => ({
+            id: c.id || c.Id,
+            author: c.autorNome || c.AutorNome || c.author || "Membro da Comunidade",
+            avatar: c.autorAvatar || c.AutorAvatar || c.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
+            text: c.texto || c.Texto || c.text || "",
+            time: "Recente",
+            likes: c.likes || c.Likes || 0,
+          }));
+          setComments(mapped);
+        }
+      } catch (err) {
+        console.warn("Erro ao carregar comentários nativos:", err);
+      }
+    }
+
+    loadComments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, postId]);
+
   if (!isOpen) return null;
 
-  const handleSend = () => {
-    if (!newCommentText.trim()) return;
+  const handleSend = async () => {
+    const text = newCommentText.trim();
+    if (!text) return;
 
     const newComment: CommentItem = {
       id: Date.now(),
-      author: "Silvia Mendes",
+      author: "Você",
       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-      text: newCommentText.trim(),
+      text,
       time: "Agora",
       likes: 0,
     };
 
     setComments((prev) => [...prev, newComment]);
     if (onAddComment) {
-      onAddComment(newCommentText.trim());
+      onAddComment(text);
     }
     setNewCommentText("");
+
+    if (postId) {
+      try {
+        const added = await sendNativeMessage("ADD_COMMENT", { postId, texto: text });
+        if (added) {
+          // Atualiza id gerado pelo SQLite se retornado
+          const backendId = (added as any).id || (added as any).Id;
+          if (backendId) {
+            setComments((prev) =>
+              prev.map((c) => (c.id === newComment.id ? { ...c, id: backendId } : c))
+            );
+          }
+        }
+      } catch (err) {
+        console.warn("Erro ao salvar comentário via bridge:", err);
+      }
+    }
   };
 
   return (

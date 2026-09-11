@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
+import { sendNativeMessage } from "../../services/nativeBridge";
 
-const leaderboard = [
+const INITIAL_LEADERBOARD = [
   { position: 1, name: "João Silva", points: 2850, avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" },
   { position: 2, name: "Maria Costa", points: 2720, avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop" },
   { position: 3, name: "Pedro Oliveira", points: 2580, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop" },
@@ -15,13 +16,38 @@ const leaderboard = [
   { position: 10, name: "Gustavo Santos", points: 1640, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop" },
 ];
 
-const topThree = leaderboard.slice(0, 3);
-const restRanking = leaderboard.slice(3);
-
 export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
+  const [ranking, setRanking] = useState(INITIAL_LEADERBOARD);
   const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
 
-  const handleOpenProfile = (user: (typeof leaderboard)[0]) => {
+  useEffect(() => {
+    let isMounted = true;
+    async function loadRanking() {
+      try {
+        const users = await sendNativeMessage<any[]>("GET_RANKING");
+        if (isMounted && users && Array.isArray(users) && users.length > 0) {
+          const mapped = users.map((u, index) => ({
+            position: index + 1,
+            name: u.nome || u.Nome || "Membro",
+            points: u.pontos || u.Pontos || 0,
+            avatar: u.fotoUrl || u.FotoUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
+          }));
+          setRanking(mapped);
+        }
+      } catch (err) {
+        console.warn("Erro ao carregar ranking do C#:", err);
+      }
+    }
+    loadRanking();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const topThree = ranking.slice(0, 3);
+  const restRanking = ranking.slice(3);
+
+  const handleOpenProfile = (user: (typeof INITIAL_LEADERBOARD)[0]) => {
     setSelectedUser({
       name: user.name,
       avatar: user.avatar,

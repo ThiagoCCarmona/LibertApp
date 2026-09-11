@@ -29,12 +29,44 @@ const AppleIcon = () => (
 );
 
 export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+  const [email, setEmail] = useState("silvia.mendes@email.com");
+  const [senha, setSenha] = useState("123456");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleLogin = async () => {
+    if (!email.trim() || !senha.trim()) {
+      setErrorMessage("Por favor, preencha e-mail e senha.");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const { sendNativeMessage } = await import("../../services/nativeBridge");
+      const user = await sendNativeMessage("LOGIN_USER", {
+        email: email.trim(),
+        senha: senha.trim(),
+      });
+
+      if (user) {
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("currentUser", JSON.stringify(user));
+        onNavigate("home");
+      } else {
+        setErrorMessage("E-mail ou senha inválidos.");
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "E-mail ou senha incorretos.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-background overflow-y-auto" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-  {/* StatusBar is rendered centrally in App.tsx to avoid duplication */}
-
       <div className="flex flex-col items-center pt-8 pb-6 px-6">
         <LibertLogo />
         <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 26, color: "#2D3A2E", marginTop: 14, letterSpacing: "-0.3px", lineHeight: 1.2 }}>
@@ -45,13 +77,31 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
         </p>
       </div>
 
+      {errorMessage && (
+        <div className="px-6 mb-3">
+          <div
+            style={{
+              background: "rgba(224, 109, 83, 0.12)",
+              border: "1px solid #E06D53",
+              borderRadius: 12,
+              padding: "10px 14px",
+              color: "#C44F35",
+              fontSize: 13,
+            }}
+          >
+            {errorMessage}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 px-6">
         <div className="flex flex-col gap-1.5">
           <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>E-mail</label>
           <input
             type="email"
-            placeholder="silvia@exemplo.com.br"
-            defaultValue="silvia@exemplo.com.br"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="silvia.mendes@email.com"
             style={{
               background: "#EDE7DA", border: "none", borderRadius: 12, padding: "14px 16px",
               fontSize: 15, color: "#2D3A2E", outline: "none", width: "100%",
@@ -66,6 +116,8 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
               placeholder="Sua senha"
               style={{
                 background: "#EDE7DA", border: "none", borderRadius: 12, padding: "14px 48px 14px 16px",
@@ -95,17 +147,18 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
         </div>
 
         <button
-          onClick={() => onNavigate("home")}
+          onClick={handleLogin}
+          disabled={isLoading}
           style={{
-            width: "100%", background: "#D68C70", color: "#FDFBF7", border: "none",
+            width: "100%", background: isLoading ? "#C4B89A" : "#D68C70", color: "#FDFBF7", border: "none",
             borderRadius: 14, padding: "16px", fontSize: 16, fontWeight: 600,
-            cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+            cursor: isLoading ? "default" : "pointer", fontFamily: "'DM Sans', sans-serif",
             boxShadow: "0 4px 16px rgba(214,140,112,0.35)",
             marginTop: 4,
           }}
           aria-label="Entrar"
         >
-          Entrar
+          {isLoading ? "Entrando..." : "Entrar"}
         </button>
       </div>
 

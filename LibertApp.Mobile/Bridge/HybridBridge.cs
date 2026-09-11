@@ -57,12 +57,20 @@ public class HybridBridge
             object? result = message.Action.ToUpperInvariant() switch
             {
                 "GET_CURRENT_USER" => await _userService.GetCurrentUserAsync(),
+                "REGISTER_USER" => await HandleRegisterUser(message.Payload),
+                "LOGIN_USER" => await HandleLoginUser(message.Payload),
                 "GET_DESAFIOS" => await _challengeService.GetDesafiosAsync(),
                 "TOGGLE_DESAFIO" => await HandleToggleDesafio(message.Payload),
                 "RECORD_POMODORO" => await HandleRecordPomodoro(message.Payload),
                 "GET_PARTNERS" => await _benefitService.GetPartnersAsync(),
                 "GET_FEED" => await _feedService.GetPostsAsync(),
+                "CREATE_POST" => await HandleCreatePost(message.Payload),
+                "LIKE_POST" => await HandleLikePost(message.Payload),
+                "GET_COMMENTS" => await HandleGetComments(message.Payload),
+                "ADD_COMMENT" => await HandleAddComment(message.Payload),
                 "GET_RANKING" => await _userService.GetRankingAsync(),
+                "SEARCH_USERS" => await HandleSearchUsers(message.Payload),
+                "TOGGLE_FOLLOW" => await HandleToggleFollow(message.Payload),
                 "UPDATE_PROFILE" => await HandleUpdateProfile(message.Payload),
                 _ => throw new InvalidOperationException($"Unknown action: {message.Action}")
             };
@@ -83,6 +91,83 @@ public class HybridBridge
                 CallbackId = message.CallbackId
             });
         }
+    }
+
+    private async Task<object?> HandleRegisterUser(string? payload)
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+        string nome = doc.GetProperty("nome").GetString() ?? "";
+        string email = doc.GetProperty("email").GetString() ?? "";
+        string senha = doc.GetProperty("senha").GetString() ?? "";
+
+        return await _userService.RegisterAsync(nome, email, senha);
+    }
+
+    private async Task<object?> HandleLoginUser(string? payload)
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+        string email = doc.GetProperty("email").GetString() ?? "";
+        string senha = doc.GetProperty("senha").GetString() ?? "";
+
+        var user = await _userService.LoginAsync(email, senha);
+        if (user == null)
+        {
+            throw new InvalidOperationException("E-mail ou senha incorretos.");
+        }
+        return user;
+    }
+
+    private async Task<object?> HandleCreatePost(string? payload)
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+        string content = doc.GetProperty("content").GetString() ?? "";
+        string category = doc.TryGetProperty("category", out var c) ? c.GetString() ?? "nature" : "nature";
+        string icon = doc.TryGetProperty("icon", out var ic) ? ic.GetString() ?? "🏔️" : "🏔️";
+        string? image = doc.TryGetProperty("image", out var img) ? img.GetString() : null;
+
+        return await _feedService.CreatePostAsync(content, category, icon, image);
+    }
+
+    private async Task<object?> HandleLikePost(string? payload)
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+        int postId = doc.GetProperty("postId").GetInt32();
+        int likes = await _feedService.LikePostAsync(postId);
+        return new { PostId = postId, Likes = likes };
+    }
+
+    private async Task<object?> HandleGetComments(string? payload)
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+        int postId = doc.GetProperty("postId").GetInt32();
+        return await _feedService.GetCommentsAsync(postId);
+    }
+
+    private async Task<object?> HandleAddComment(string? payload)
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+        int postId = doc.GetProperty("postId").GetInt32();
+        string texto = doc.GetProperty("texto").GetString() ?? "";
+
+        return await _feedService.AddCommentAsync(postId, texto);
+    }
+
+    private async Task<object?> HandleSearchUsers(string? payload)
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+        string termo = doc.TryGetProperty("termo", out var t) ? t.GetString() ?? "" : "";
+        bool apenasSeguindo = doc.TryGetProperty("apenasSeguindo", out var s) && s.GetBoolean();
+
+        return await _userService.SearchUsersAsync(termo, apenasSeguindo);
+    }
+
+    private async Task<object?> HandleToggleFollow(string? payload)
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+        int seguidoId = doc.GetProperty("seguidoId").GetInt32();
+
+        bool isFollowing = await _userService.ToggleFollowAsync(seguidoId);
+        return new { SeguidoId = seguidoId, IsFollowing = isFollowing };
     }
 
     private async Task<object?> HandleToggleDesafio(string? payload)
