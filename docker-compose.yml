@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # Backend .NET 10 Web API + SQLite
   libertapp-api:
     build:
       context: ./LibertApp.Api
@@ -16,6 +17,19 @@ services:
       # Persiste o banco SQLite central mesmo ao reiniciar ou recriar containers
       - libertapp_data:/app/data
 
+  # Frontend Web (React / Vite + Nginx com proxy reverso para API)
+  libertapp-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: libertapp_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - libertapp-api
+
 volumes:
   libertapp_data:
     driver: local
+

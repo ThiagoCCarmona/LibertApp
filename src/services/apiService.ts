@@ -3,13 +3,20 @@
  * Gerencia autenticacao, feed, interacoes, colegas e gamificacao.
  */
 
-// Permite configurar a URL da VPS dinamicamente via localStorage ou variavel global
+// Permite configurar a URL da VPS dinamicamente via localStorage, variavel global ou host atual
 export function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
     const customUrl = (window as any).__LIBERTAPP_API_URL || localStorage.getItem("libertapp_api_url");
     if (customUrl) return customUrl.replace(/\/$/, "");
+
+    // Se estiver rodando no navegador (VPS web ou localhost na porta diferente de 8080)
+    // Se a porta for 80 (ou padrão HTTP/HTTPS), o Nginx faz proxy reverso de /api diretamente no mesmo origin
+    if (window.location && window.location.origin && window.location.port !== "5173" && !window.location.protocol.startsWith("file") && !window.location.protocol.startsWith("app")) {
+      // No Nginx container web, a API está em /api no mesmo host
+      return window.location.origin.replace(/\/$/, "");
+    }
   }
-  // URL padrao: porta 8080 do backend em container
+  // URL padrao de desenvolvimento ou casca nativa: porta 8080 do container
   return "http://localhost:8080";
 }
 
