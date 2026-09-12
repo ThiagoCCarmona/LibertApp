@@ -7,9 +7,9 @@ services:
       context: ./LibertApp.Api
       dockerfile: Dockerfile
     container_name: libertapp_backend
-    restart: always
-    ports:
-      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - default
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
@@ -23,13 +23,27 @@ services:
       context: .
       dockerfile: Dockerfile.web
     container_name: libertapp_frontend
-    restart: always
-    ports:
-      - "80:80"
+    restart: unless-stopped
+    networks:
+      - default
+      - proxy
     depends_on:
       - libertapp-api
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.libertapp.rule=Host(`libertapp.tccodes.com.br`)"
+      - "traefik.http.routers.libertapp.entrypoints=websecure"
+      - "traefik.http.routers.libertapp.tls.certresolver=myresolver"
+      - "traefik.http.services.libertapp.loadbalancer.server.port=80"
 
 volumes:
   libertapp_data:
     driver: local
+
+networks:
+  default:
+    driver: bridge
+  proxy:
+    external: true
+
 

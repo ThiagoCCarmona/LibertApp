@@ -16,8 +16,8 @@ export function getApiBaseUrl(): string {
       return window.location.origin.replace(/\/$/, "");
     }
   }
-  // URL padrao de desenvolvimento ou casca nativa: porta 8080 do container
-  return "http://localhost:8080";
+  // URL padrao: se estiver em produção externa, usa a VPS com SSL no domínio oficial
+  return "https://libertapp.tccodes.com.br";
 }
 
 export function setApiBaseUrl(url: string) {
