@@ -47,6 +47,13 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
 
+    // Migração dinâmica caso a coluna IsAdmin não exista no banco já existente
+    try
+    {
+        db.Database.ExecuteSqlRaw("ALTER TABLE Usuarios ADD COLUMN IsAdmin INTEGER NOT NULL DEFAULT 0;");
+    }
+    catch { /* Coluna já existe */ }
+
     // 1. Seed do usuário Administrador
     var adminEmail = "admin@libertapp.com.br";
     var adminUser = db.Usuarios.FirstOrDefault(u => u.Email.ToLower() == adminEmail);
