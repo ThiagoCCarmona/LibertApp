@@ -1,6 +1,8 @@
-import React, { useState } from "react";
-import { X, Trophy, Flame, Clock, Award, ThumbsUp, Check, UserPlus, UserCheck } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, Trophy, Flame, Clock, Award, ThumbsUp, Check, UserPlus, UserCheck, MessageSquare, Image as ImageIcon } from "lucide-react";
 import { UnfollowConfirmModal } from "./UnfollowConfirmModal";
+import { apiService } from "../../services/apiService";
+import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
 export interface UserProfileData {
   id?: number;
@@ -14,6 +16,7 @@ export interface UserProfileData {
   bio?: string;
   department?: string;
   isFollowing?: boolean;
+  posts?: any[];
   achievements?: {
     icon: string;
     title: string;
@@ -32,12 +35,67 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
   const [incentiveSent, setIncentiveSent] = useState(false);
   const [following, setFollowing] = useState(user?.isFollowing ?? false);
   const [showUnfollowConfirm, setShowUnfollowConfirm] = useState(false);
+  const [userPosts, setUserPosts] = useState<any[]>(user?.posts || []);
+  const [profileDetails, setProfileDetails] = useState<UserProfileData | null>(user);
+  const [loadingPosts, setLoadingPosts] = useState(false);
 
-  React.useEffect(() => {
-    if (user) {
-      setFollowing(user.isFollowing ?? false);
+  useEffect(() => {
+    if (!isOpen || !user) return;
+    setFollowing(user.isFollowing ?? false);
+    setProfileDetails(user);
+
+    // Se temos o ID do usuário, busca dados enriquecidos e posts reais da API
+    if (user.id) {
+      let isMounted = true;
+      setLoadingPosts(true);
+      const callerId = (() => {
+        try {
+          const s = localStorage.getItem("currentUser");
+          return s ? JSON.parse(s)?.id || 1 : 1;
+        } catch { return 1; }
+      })();
+
+      apiService.getUserProfile(user.id, callerId)
+        .then((fullProfile) => {
+          if (isMounted && fullProfile) {
+            setProfileDetails((prev) => ({
+              ...prev!,
+              name: fullProfile.name || prev?.name || "Participante",
+              avatar: fullProfile.avatar || prev?.avatar || DEFAULT_AVATAR_URL,
+              level: fullProfile.level || prev?.level || 1,
+              levelName: fullProfile.levelName || prev?.levelName || "Foco Consciente",
+              points: fullProfile.points ?? prev?.points ?? 0,
+              streakDays: fullProfile.streakDays ?? prev?.streakDays ?? 1,
+              focusMinutes: fullProfile.focusMinutes ?? prev?.focusMinutes ?? 30,
+              bio: fullProfile.bio || prev?.bio,
+              department: fullProfile.department || prev?.department,
+              isFollowing: fullProfile.isFollowing ?? prev?.isFollowing,
+            }));
+            if (fullProfile.posts && Array.isArray(fullProfile.posts)) {
+              setUserPosts(fullProfile.posts);
+            }
+            if (typeof fullProfile.isFollowing === "boolean") {
+              setFollowing(fullProfile.isFollowing);
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (isMounted) setLoadingPosts(false);
+        });
+
+      // Também busca os posts diretamente caso a rota profile retorne parcial
+      apiService.getUserPosts(user.id)
+        .then((posts) => {
+          if (isMounted && posts && Array.isArray(posts) && posts.length > 0) {
+            setUserPosts(posts);
+          }
+        })
+        .catch(() => {});
+
+      return () => { isMounted = false; };
     }
-  }, [user]);
+  }, [user, isOpen]);
 
   if (!isOpen || !user) return null;
 
@@ -126,8 +184,8 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
           <div style={{ position: "relative", marginBottom: 12 }}>
             <img
-              src={user.avatar}
-              alt={user.name}
+              src={profileDetails?.avatar || user.avatar}
+              alt={profileDetails?.name || user.name}
               style={{
                 width: 76,
                 height: 76,
@@ -151,7 +209,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
                 border: "2px solid #FDFBF7",
               }}
             >
-              Nv {user.level}
+              Nv {profileDetails?.level || user.level}
             </span>
           </div>
 
@@ -164,18 +222,18 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
               margin: "0 0 2px 0",
             }}
           >
-            {user.name}
+            {profileDetails?.name || user.name}
           </h2>
 
           <p style={{ fontSize: 12, color: "#D68C70", fontWeight: 600, margin: "0 0 4px 0" }}>
-            {user.levelName || `Nível ${user.level} - Foco Consciente`}
+            {profileDetails?.levelName || user.levelName || `Nível ${profileDetails?.level || user.level} - Foco Consciente`}
           </p>
 
           <p style={{ fontSize: 12, color: "#7A8A7B", margin: "0 0 14px 0" }}>
-            {user.department || "Membro da Comunidade Carmelita"}
+            {profileDetails?.department || user.department || "Membro da Comunidade Carmelita"}
           </p>
 
-          {user.bio && (
+          {(profileDetails?.bio || user.bio) && (
             <p
               style={{
                 fontSize: 13,
@@ -187,7 +245,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
                 lineHeight: 1.4,
               }}
             >
-              "{user.bio}"
+              "{profileDetails?.bio || user.bio}"
             </p>
           )}
         </div>
@@ -211,7 +269,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
             }}
           >
             <Trophy size={18} color="#D68C70" style={{ margin: "0 auto 4px auto" }} />
-            <p style={{ fontSize: 16, fontWeight: 700, color: "#2D3A2E", margin: 0 }}>{user.points}</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#2D3A2E", margin: 0 }}>{profileDetails?.points ?? user.points}</p>
             <p style={{ fontSize: 10, color: "#7A8A7B", margin: 0 }}>Pontos</p>
           </div>
 
@@ -225,7 +283,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
             }}
           >
             <Clock size={18} color="#C4A882" style={{ margin: "0 auto 4px auto" }} />
-            <p style={{ fontSize: 16, fontWeight: 700, color: "#2D3A2E", margin: 0 }}>{user.focusMinutes}m</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#2D3A2E", margin: 0 }}>{profileDetails?.focusMinutes ?? user.focusMinutes}m</p>
             <p style={{ fontSize: 10, color: "#7A8A7B", margin: 0 }}>Foco Off</p>
           </div>
 
@@ -239,9 +297,69 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
             }}
           >
             <Flame size={18} color="#E06D53" style={{ margin: "0 auto 4px auto" }} />
-            <p style={{ fontSize: 16, fontWeight: 700, color: "#2D3A2E", margin: 0 }}>{user.streakDays}d</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#2D3A2E", margin: 0 }}>{profileDetails?.streakDays ?? user.streakDays}d</p>
             <p style={{ fontSize: 10, color: "#7A8A7B", margin: 0 }}>Sequência</p>
           </div>
+        </div>
+
+        {/* Publicações do Usuário */}
+        <div style={{ marginBottom: 20 }}>
+          <h3
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#2D3A2E",
+              marginBottom: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <ImageIcon size={15} color="#D68C70" /> Publicações no Mural ({userPosts.length})
+          </h3>
+
+          {loadingPosts ? (
+            <p style={{ fontSize: 12, color: "#7A8A7B", textAlign: "center", padding: "10px 0" }}>Carregando publicações...</p>
+          ) : userPosts.length === 0 ? (
+            <div style={{ background: "#F5EFE3", borderRadius: 12, padding: "14px", textAlign: "center" }}>
+              <p style={{ fontSize: 12, color: "#7A8A7B", margin: 0 }}>Nenhuma publicação feita ainda por este colega.</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {userPosts.map((p: any) => (
+                <div
+                  key={p.id}
+                  style={{
+                    background: "#FAF7F0",
+                    borderRadius: 12,
+                    padding: "12px",
+                    border: "1px solid rgba(45,58,46,0.08)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#D68C70" }}>{p.icon || "🌱"} {p.type || "Momento"}</span>
+                    <span style={{ fontSize: 10, color: "#7A8A7B" }}>{p.time || "Recentemente"}</span>
+                  </div>
+
+                  {p.image && (
+                    <div style={{ width: "100%", aspectRatio: "1/1", borderRadius: 8, overflow: "hidden", background: "#EDE7DA" }}>
+                      <img src={p.image} alt="Foto da publicação" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  )}
+
+                  <p style={{ fontSize: 12, color: "#2D3A2E", margin: 0, lineHeight: 1.4 }}>{p.content}</p>
+
+                  <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#7A8A7B", marginTop: 2 }}>
+                    <span>❤️ {p.likes || 0} curtidas</span>
+                    <span>💬 {p.comments || 0} comentários</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Conquistas Recentes */}

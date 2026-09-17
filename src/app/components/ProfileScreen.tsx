@@ -1,7 +1,9 @@
 import * as React from "react";
-import { Bell, Moon, Smartphone, LogOut } from "lucide-react";
+import { Bell, Moon, Smartphone, LogOut, Shield, Trash2, Image as ImageIcon } from "lucide-react";
 import { sendNativeMessage } from "../../services/nativeBridge";
+import { apiService } from "../../services/apiService";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
+import { AdminUsersModal } from "./AdminUsersModal";
 
 const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean; onChange: (val: boolean) => void }) => (
   <button
@@ -151,18 +153,40 @@ export function ProfileScreen({
     localStorage.setItem("pref_dailylimit", String(val));
   };
 
+  const [isAdminUsersOpen, setIsAdminUsersOpen] = React.useState(false);
+  const [myPosts, setMyPosts] = React.useState<any[]>([]);
+  const [loadingPosts, setLoadingPosts] = React.useState(false);
+
+  const loadMyPosts = React.useCallback(async (userId: number) => {
+    if (!userId) return;
+    setLoadingPosts(true);
+    try {
+      const posts = await apiService.getUserPosts(userId);
+      if (posts && Array.isArray(posts)) {
+        setMyPosts(posts);
+      }
+    } catch (err) {
+      console.warn("Erro ao buscar posts do perfil:", err);
+    } finally {
+      setLoadingPosts(false);
+    }
+  }, []);
+
   React.useEffect(() => {
     let isMounted = true;
     const loadUser = async () => {
       try {
         const stored = localStorage.getItem("currentUser");
         if (stored && isMounted) {
-          setCurrentUser(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          setCurrentUser(parsed);
+          if (parsed?.id) loadMyPosts(parsed.id);
         }
 
-        const u = await sendNativeMessage("GET_CURRENT_USER");
+        const u = await sendNativeMessage<any>("GET_CURRENT_USER");
         if (isMounted && u) {
           setCurrentUser(u);
+          if (u?.id) loadMyPosts(u.id);
         }
       } catch (err) {
         console.warn("Erro ao carregar usuário em ProfileScreen:", err);
@@ -173,7 +197,11 @@ export function ProfileScreen({
     const handleUpdate = () => {
       try {
         const stored = localStorage.getItem("currentUser");
-        if (stored) setCurrentUser(JSON.parse(stored));
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setCurrentUser(parsed);
+          if (parsed?.id) loadMyPosts(parsed.id);
+        }
       } catch {}
     };
     window.addEventListener("user_profile_updated", handleUpdate);
@@ -182,7 +210,17 @@ export function ProfileScreen({
       isMounted = false;
       window.removeEventListener("user_profile_updated", handleUpdate);
     };
-  }, []);
+  }, [loadMyPosts]);
+
+  const handleDeleteMyPost = async (postId: number) => {
+    if (!window.confirm("Deseja realmente apagar esta publicação?")) return;
+    setMyPosts((prev) => prev.filter((p) => p.id !== postId));
+    try {
+      await apiService.deletePost(postId, currentUser?.id || 1);
+    } catch (err) {
+      console.warn("Erro ao excluir post:", err);
+    }
+  };
 
   const displayName = currentUser?.nome || "Estudante Carmelita";
   const displayAvatar = currentUser?.fotoUrl || DEFAULT_AVATAR_URL;
@@ -395,6 +433,136 @@ export function ProfileScreen({
           </button>
         </div>
 
+        {/* Botão Especial do Painel Administrativo (Exclusivo para Admins) */}
+        {currentUser?.isAdmin && (
+          <div className="px-6 pb-6">
+            <button
+              onClick={() => setIsAdminUsersOpen(true)}
+              style={{
+                width: "100%",
+                background: "#2D3A2E",
+                border: "none",
+                borderRadius: 14,
+                padding: "14px 18px",
+                color: "#FDFBF7",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                boxShadow: "0 4px 16px rgba(45,58,46,0.25)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Shield size={20} color="#D68C70" />
+                <div style={{ textAlign: "left" }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Painel de Gestão de Usuários</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "rgba(253,251,247,0.7)", fontWeight: 400 }}>
+                    Controlar, apagar, desativar e redefinir senhas
+                  </p>
+                </div>
+              </div>
+              <span style={{ fontSize: 18 }}>➔</span>
+            </button>
+          </div>
+        )}
+
+        {/* Seção Minhas Publicações */}
+        <div className="px-6 pb-6">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 18, color: "#2D3A2E", margin: 0 }}>
+              📸 Minhas Publicações ({myPosts.length})
+            </h2>
+            <button
+              onClick={() => currentUser?.id && loadMyPosts(currentUser.id)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#D68C70",
+                fontSize: 12,
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Atualizar
+            </button>
+          </div>
+
+          {loadingPosts ? (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <p style={{ fontSize: 12, color: "#7A8A7B" }}>Carregando suas publicações...</p>
+            </div>
+          ) : myPosts.length === 0 ? (
+            <div
+              style={{
+                background: "#F5EFE3",
+                borderRadius: 14,
+                padding: "20px",
+                textAlign: "center",
+                border: "1px dashed rgba(214,140,112,0.4)",
+              }}
+            >
+              <p style={{ fontSize: 13, color: "#2D3A2E", fontWeight: 600, margin: "0 0 4px 0" }}>
+                Você ainda não publicou no mural
+              </p>
+              <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>
+                Compartilhe fotos e conquistas na tela de Início para registrar seus momentos!
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {myPosts.map((p) => (
+                <div
+                  key={p.id}
+                  style={{
+                    background: "#F5EFE3",
+                    borderRadius: 14,
+                    padding: "12px 14px",
+                    border: "1px solid rgba(45,58,46,0.08)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#D68C70" }}>
+                      {p.icon || "🌱"} {p.type || "Publicação"} • {p.time}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteMyPost(p.id)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#C4785A",
+                        padding: "4px",
+                      }}
+                      title="Excluir minha publicação"
+                      aria-label="Excluir publicação"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+
+                  {p.image && (
+                    <div style={{ width: "100%", aspectRatio: "1/1", borderRadius: 10, overflow: "hidden", background: "#EDE7DA" }}>
+                      <img src={p.image} alt="Minha foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  )}
+
+                  <p style={{ fontSize: 12, color: "#2D3A2E", margin: 0, lineHeight: 1.4 }}>{p.content}</p>
+
+                  <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#7A8A7B", marginTop: 2 }}>
+                    <span>❤️ {p.likes || 0} curtidas</span>
+                    <span>💬 {p.comments || 0} comentários</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Alert Configuration Section */}
         <div className="px-6 pb-6">
           <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 18, color: "#2D3A2E", marginBottom: 12 }}>
@@ -546,6 +714,14 @@ export function ProfileScreen({
           )}
         </div>
       </div>
+
+      {currentUser?.isAdmin && (
+        <AdminUsersModal
+          isOpen={isAdminUsersOpen}
+          onClose={() => setIsAdminUsersOpen(false)}
+          callerId={currentUser?.id || 1}
+        />
+      )}
     </div>
   );
 }

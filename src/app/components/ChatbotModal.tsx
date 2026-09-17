@@ -43,7 +43,29 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
   const [statusNote, setStatusNote] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  // Recarrega conversa isolada do usuário sempre que userId mudar ou o modal abrir
   useEffect(() => {
+    if (!isOpen) return;
+    try {
+      const saved = localStorage.getItem(`libertapp_chat_${userId}`);
+      if (saved) {
+        setMessages(JSON.parse(saved));
+        return;
+      }
+    } catch {}
+
+    setMessages([
+      {
+        id: `welcome_${userId}`,
+        sender: "bot",
+        text: `Olá${userName ? `, ${userName.split(" ")[0]}` : ""}! Sou o Conselheiro Virtual do LibertApp 🌱. Estou aqui para te ajudar a cultivar uma relação equilibrada com a tecnologia, desacelerar a mente e manter o foco nos momentos que realmente importam. Como posso te apoiar hoje?`,
+        time: "Agora",
+      },
+    ]);
+  }, [userId, isOpen, userName]);
+
+  useEffect(() => {
+    if (!messages || messages.length === 0) return;
     try {
       localStorage.setItem(`libertapp_chat_${userId}`, JSON.stringify(messages));
     } catch {}

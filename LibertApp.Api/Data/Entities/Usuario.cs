@@ -18,6 +18,7 @@ public class Usuario
     public int Nivel { get; set; } = 1;
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
     public bool IsAdmin { get; set; } = false;
+    public bool Ativo { get; set; } = true;
 
     public ICollection<SessaoPomodoro> SessoesPomodoro { get; set; } = new List<SessaoPomodoro>();
     public ICollection<UsuarioDesafio> DesafiosConcluidos { get; set; } = new List<UsuarioDesafio>();

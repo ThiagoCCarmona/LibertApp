@@ -35,7 +35,8 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
       try {
         const local = await sendNativeMessage<any[]>("GET_RANKING");
         if (isMounted && local && Array.isArray(local) && local.length > 0) {
-          const mapped: RankingUser[] = local.map((u, index) => ({
+          const filtered = local.filter((u) => !u.isAdmin && !u.IsAdmin && (u.points ?? u.pontos ?? u.Pontos ?? 0) > 0);
+          const mapped: RankingUser[] = filtered.map((u, index) => ({
             id: u.id ?? u.Id,
             position: index + 1,
             name: u.name || u.nome || u.Nome || "Participante",
@@ -51,8 +52,9 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
       // 2. Busca da API central na VPS para atualizar ranking global
       try {
         const apiRank = await apiService.getLeaderboard();
-        if (isMounted && apiRank && Array.isArray(apiRank) && apiRank.length > 0) {
-          const mapped: RankingUser[] = apiRank.map((u: any, index: number) => ({
+        if (isMounted && apiRank && Array.isArray(apiRank)) {
+          const filtered = apiRank.filter((u: any) => !u.isAdmin && !u.IsAdmin);
+          const mapped: RankingUser[] = filtered.map((u: any, index: number) => ({
             id: u.id ?? u.Id,
             position: index + 1,
             name: u.name || u.nome || u.Nome || "Participante",
@@ -81,6 +83,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
 
   const handleOpenProfile = (user: RankingUser) => {
     setSelectedUser({
+      id: user.id,
       name: user.name,
       avatar: user.avatar,
       level: Math.max(1, Math.floor(user.points / 600)),

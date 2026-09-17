@@ -213,6 +213,29 @@ export function PostCommentsModal({
     }
   };
 
+  const handleLikeComment = async (commentId: number) => {
+    const userId = currentUser?.id || 1;
+    setComments((prev) =>
+      prev.map((c) => {
+        if (c.id === commentId) {
+          const wasLiked = !!c.liked;
+          return {
+            ...c,
+            liked: !wasLiked,
+            likes: wasLiked ? Math.max(0, c.likes - 1) : c.likes + 1,
+          };
+        }
+        return c;
+      })
+    );
+
+    try {
+      await apiService.toggleCommentLike(commentId, userId);
+    } catch (err) {
+      console.warn("Erro ao curtir comentário na API:", err);
+    }
+  };
+
   return (
     <div
       style={{
@@ -426,18 +449,35 @@ export function PostCommentsModal({
                     <p style={{ fontSize: 12, color: "#2D3A2E", lineHeight: 1.4, margin: 0 }}>{c.text}</p>
                     <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6 }}>
                       <button
+                        onClick={() => handleLikeComment(c.id)}
                         style={{
                           background: "none",
                           border: "none",
-                          padding: 0,
+                          padding: "2px 6px",
                           cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
-                          gap: 4,
+                          gap: 5,
+                          borderRadius: 8,
+                          backgroundColor: c.liked ? "rgba(224, 109, 83, 0.1)" : "transparent",
+                          transition: "all 0.15s ease",
                         }}
+                        aria-label={c.liked ? "Descurtir comentário" : "Curtir comentário"}
                       >
-                        <Heart size={13} color="#7A8A7B" />
-                        <span style={{ fontSize: 11, color: "#7A8A7B" }}>{c.likes > 0 ? c.likes : "Curtir"}</span>
+                        <Heart
+                          size={13}
+                          color={c.liked ? "#E06D53" : "#7A8A7B"}
+                          fill={c.liked ? "#E06D53" : "none"}
+                        />
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: c.liked ? 600 : 400,
+                            color: c.liked ? "#E06D53" : "#7A8A7B",
+                          }}
+                        >
+                          {c.likes > 0 ? `${c.likes} ${c.likes === 1 ? "curtida" : "curtidas"}` : "Curtir"}
+                        </span>
                       </button>
                     </div>
                   </div>

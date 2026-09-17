@@ -118,8 +118,9 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
           users.push(cur);
         }
       }
-      users.sort((a, b) => (b.pontos || 0) - (a.pontos || 0));
-      return users.map((u, i) => ({
+      const nonAdminUsers = users.filter((u) => !u.isAdmin && !u.IsAdmin && (u.pontos || u.points || 0) > 0);
+      nonAdminUsers.sort((a, b) => (b.pontos || b.points || 0) - (a.pontos || a.points || 0));
+      return nonAdminUsers.map((u, i) => ({
         id: u.id,
         position: i + 1,
         nome: u.nome,

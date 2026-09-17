@@ -47,12 +47,25 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
 
-    // Migração dinâmica caso a coluna IsAdmin não exista no banco já existente
+    // Migrações dinâmicas no banco SQLite existente
     try
     {
         db.Database.ExecuteSqlRaw("ALTER TABLE Usuarios ADD COLUMN IsAdmin INTEGER NOT NULL DEFAULT 0;");
     }
     catch { /* Coluna já existe */ }
+
+    try
+    {
+        db.Database.ExecuteSqlRaw("ALTER TABLE Usuarios ADD COLUMN Ativo INTEGER NOT NULL DEFAULT 1;");
+    }
+    catch { /* Coluna já existe */ }
+
+    // O Administrador não compete nem acumula pontos no pódio
+    try
+    {
+        db.Database.ExecuteSqlRaw("UPDATE Usuarios SET Pontos = 0 WHERE IsAdmin = 1;");
+    }
+    catch { }
 
     // 1. Seed do usuário Administrador
     var adminEmail = "admin@libertapp.com.br";
@@ -74,17 +87,21 @@ using (var scope = app.Services.CreateScope())
             Localizacao = "Comunidade Carmelita",
             NumeroCarteira = "LBT-ADMIN-0001",
             FotoUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-            Pontos = 5000,
-            Nivel = 5,
+            Pontos = 0,
+            Nivel = 1,
             IsAdmin = true,
+            Ativo = true,
             DataCriacao = DateTime.UtcNow
         });
         db.SaveChanges();
     }
-    else if (!adminUser.IsAdmin)
+    else
     {
-        adminUser.IsAdmin = true;
-        db.SaveChanges();
+        bool changed = false;
+        if (!adminUser.IsAdmin) { adminUser.IsAdmin = true; changed = true; }
+        if (adminUser.Pontos != 0) { adminUser.Pontos = 0; changed = true; }
+        if (!adminUser.Ativo) { adminUser.Ativo = true; changed = true; }
+        if (changed) db.SaveChanges();
     }
 
     // 2. Seed da usuária padrão Silvia Mendes

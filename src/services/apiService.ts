@@ -217,6 +217,41 @@ export const apiService = {
     });
   },
 
+  async toggleCommentLike(commentId: number, usuarioId: number): Promise<{ commentId: number; likes: number; liked: boolean }> {
+    return request<{ commentId: number; likes: number; liked: boolean }>(`/api/feed/comments/${commentId}/like`, {
+      method: "POST",
+      body: JSON.stringify({ usuarioId }),
+    });
+  },
+
+  async getUserPosts(usuarioId: number): Promise<any[]> {
+    return request<any[]>(`/api/feed/user/${usuarioId}`);
+  },
+
+  // Painel de Administração
+  async getAdminUsers(callerId: number): Promise<any[]> {
+    return request<any[]>(`/api/admin/users?callerId=${callerId}`);
+  },
+
+  async deleteUser(userId: number, callerId: number): Promise<{ message: string }> {
+    return request<{ message: string }>(`/api/admin/users/${userId}?callerId=${callerId}`, {
+      method: "DELETE",
+    });
+  },
+
+  async toggleUserStatus(userId: number, callerId: number): Promise<{ id: number; ativo: boolean; message: string }> {
+    return request<{ id: number; ativo: boolean; message: string }>(`/api/admin/users/${userId}/toggle-status?callerId=${callerId}`, {
+      method: "POST",
+    });
+  },
+
+  async resetUserPassword(userId: number, callerId: number, newPassword: string): Promise<{ message: string }> {
+    return request<{ message: string }>(`/api/admin/users/${userId}/reset-password?callerId=${callerId}`, {
+      method: "POST",
+      body: JSON.stringify({ newPassword }),
+    });
+  },
+
   // Busca e Colegas
   async searchUsers(termo: string, callerId: number, apenasSeguindo: boolean = false): Promise<SearchUserDto[]> {
     const params = new URLSearchParams({

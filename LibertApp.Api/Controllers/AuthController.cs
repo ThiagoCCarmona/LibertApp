@@ -73,6 +73,11 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "E-mail ou senha incorretos." });
         }
 
+        if (!user.Ativo)
+        {
+            return Unauthorized(new { message = "Sua conta foi desativada pela coordenação/administração." });
+        }
+
         return Ok(ToDto(user));
     }
 
@@ -96,17 +101,24 @@ public class AuthController : ControllerBase
         user.Curso = request.Curso ?? user.Curso;
         user.Bio = request.Bio ?? user.Bio;
         user.Localizacao = request.Localizacao ?? user.Localizacao;
-        if (!string.IsNullOrEmpty(request.FotoUrl)) user.FotoUrl = request.FotoUrl;
+        user.FotoUrl = !string.IsNullOrWhiteSpace(request.FotoUrl) ? request.FotoUrl : user.FotoUrl;
 
         await _context.SaveChangesAsync();
         return Ok(ToDto(user));
     }
 
     [HttpPost("recover")]
-    public IActionResult RecoverPassword([FromBody] RecoverRequest request)
+    public async Task<IActionResult> Recover([FromBody] RecoverRequest request)
     {
-        // Em produção, integraria com SMTP para envio de token real
-        return Ok(new { message = "Link de recuperação enviado com sucesso para o e-mail informado." });
+        var emailLower = request.Email.Trim().ToLower();
+        var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailLower);
+        if (user == null)
+        {
+            return NotFound(new { message = "E-mail não encontrado no sistema." });
+        }
+
+        // Simula envio de instruções de recuperação
+        return Ok(new { message = "Instruções para redefinição de acesso foram geradas com sucesso." });
     }
 
     private static string HashPassword(string password)
@@ -131,7 +143,8 @@ public class AuthController : ControllerBase
         fotoUrl = u.FotoUrl,
         pontos = u.Pontos,
         nivel = u.Nivel,
-        isAdmin = u.IsAdmin
+        isAdmin = u.IsAdmin,
+        ativo = u.Ativo
     };
 }
 

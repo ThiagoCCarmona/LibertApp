@@ -243,6 +243,48 @@ public class FeedController : ControllerBase
         return Ok(new { message = "Comentário excluído com sucesso." });
     }
 
+    [HttpPost("comments/{id}/like")]
+    public async Task<IActionResult> ToggleCommentLike(int id, [FromBody] LikeRequest request)
+    {
+        var comentario = await _context.PostComentarios.FindAsync(id);
+        if (comentario == null) return NotFound(new { message = "Comentário não encontrado." });
+
+        // Incrementa curtida do comentário
+        comentario.Likes += 1;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { commentId = id, likes = comentario.Likes, liked = true });
+    }
+
+    [HttpGet("user/{usuarioId}")]
+    public async Task<IActionResult> GetUserPosts(int usuarioId)
+    {
+        var posts = await _context.FeedPosts
+            .Where(p => p.UsuarioId == usuarioId)
+            .OrderByDescending(p => p.DataPublicacao)
+            .Select(p => new
+            {
+                id = p.Id,
+                usuarioId = p.UsuarioId,
+                author = p.Autor,
+                avatar = p.AvatarUrl,
+                curso = p.Curso,
+                type = p.TipoPost,
+                content = p.Conteudo,
+                image = p.ImagemUrl,
+                bgColor = p.BgColor,
+                borderColor = p.BorderColor,
+                icon = p.Icon,
+                likes = p.Likes,
+                comments = p.Comments,
+                liked = false,
+                time = GetRelativeTime(p.DataPublicacao)
+            })
+            .ToListAsync();
+
+        return Ok(posts);
+    }
+
     private static string GetRelativeTime(DateTime dt)
     {
         var diff = DateTime.UtcNow - dt;
