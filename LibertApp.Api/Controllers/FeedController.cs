@@ -211,7 +211,10 @@ public class FeedController : ControllerBase
         var post = await _context.FeedPosts.FindAsync(id);
         if (post == null) return NotFound(new { message = "Post não encontrado." });
 
-        if (post.UsuarioId != callerId)
+        var caller = await _context.Usuarios.FindAsync(callerId);
+        if (caller == null) return Unauthorized(new { message = "Usuário não autenticado." });
+
+        if (post.UsuarioId != callerId && !caller.IsAdmin)
         {
             return Forbid();
         }
@@ -219,6 +222,25 @@ public class FeedController : ControllerBase
         _context.FeedPosts.Remove(post);
         await _context.SaveChangesAsync();
         return Ok(new { message = "Post excluído com sucesso." });
+    }
+
+    [HttpDelete("comments/{id}")]
+    public async Task<IActionResult> DeleteComment(int id, [FromQuery] int callerId)
+    {
+        var comentario = await _context.PostComentarios.FindAsync(id);
+        if (comentario == null) return NotFound(new { message = "Comentário não encontrado." });
+
+        var caller = await _context.Usuarios.FindAsync(callerId);
+        if (caller == null) return Unauthorized(new { message = "Usuário não autenticado." });
+
+        if (comentario.UsuarioId != callerId && !caller.IsAdmin)
+        {
+            return Forbid();
+        }
+
+        _context.PostComentarios.Remove(comentario);
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Comentário excluído com sucesso." });
     }
 
     private static string GetRelativeTime(DateTime dt)

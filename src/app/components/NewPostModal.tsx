@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { X, Image as ImageIcon, Sparkles } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { X, Image as ImageIcon, Sparkles, Trash2, Upload } from "lucide-react";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
 interface NewPostModalProps {
@@ -23,10 +23,69 @@ const CATEGORIES = [
 export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) {
   const [content, setContent] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
-  const [imageUrl, setImageUrl] = useState("");
-  const [showImageInput, setShowImageInput] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   if (!isOpen) return null;
+
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1080;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return resolve(e.target?.result as string);
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.82));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Por favor, selecione um arquivo de imagem válido.");
+      return;
+    }
+
+    try {
+      setIsCompressing(true);
+      const compressed = await compressImage(file);
+      setImagePreview(compressed);
+    } catch (err) {
+      console.warn("Erro ao processar imagem:", err);
+      alert("Não foi possível carregar a imagem selecionada.");
+    } finally {
+      setIsCompressing(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handlePublish = () => {
     if (!content.trim()) return;
@@ -34,11 +93,10 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
       content: content.trim(),
       category: selectedCategory.id,
       icon: selectedCategory.icon,
-      image: imageUrl.trim() || undefined,
+      image: imagePreview || undefined,
     });
     setContent("");
-    setImageUrl("");
-    setShowImageInput(false);
+    setImagePreview(null);
     onClose();
   };
 
@@ -54,6 +112,7 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
         flexDirection: "column",
         justifyContent: "flex-end",
         animation: "fadeIn 0.2s ease-out",
+        fontFamily: "'DM Sans', sans-serif",
       }}
     >
       <div
@@ -62,14 +121,15 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
           padding: "20px 24px 28px 24px",
-          maxHeight: "90vh",
+          maxHeight: "92vh",
           display: "flex",
           flexDirection: "column",
           boxShadow: "0 -8px 30px rgba(45, 58, 46, 0.15)",
+          overflowY: "auto",
         }}
       >
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <button
             onClick={onClose}
             style={{
@@ -102,16 +162,18 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
 
           <button
             onClick={handlePublish}
-            disabled={!content.trim()}
+            disabled={!content.trim() || isCompressing}
             style={{
-              background: content.trim() ? "linear-gradient(135deg, #D68C70, #C4785A)" : "#E5DCCE",
-              color: content.trim() ? "#FDFBF7" : "#A39788",
+              background: content.trim() && !isCompressing
+                ? "linear-gradient(135deg, #D68C70, #C4785A)"
+                : "#E5DCCE",
+              color: content.trim() && !isCompressing ? "#FDFBF7" : "#A39788",
               border: "none",
               borderRadius: 20,
               padding: "8px 18px",
               fontSize: 13,
               fontWeight: 600,
-              cursor: content.trim() ? "pointer" : "default",
+              cursor: content.trim() && !isCompressing ? "pointer" : "default",
               transition: "all 0.2s ease",
             }}
           >
@@ -158,7 +220,7 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Como foi seu momento desconectado hoje? Compartilhe conquistas, sensações ou reflexões..."
-          rows={4}
+          rows={3}
           style={{
             width: "100%",
             background: "#F5EFE3",
@@ -175,27 +237,73 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
           }}
         />
 
-        {/* Optional Image Input */}
-        {showImageInput && (
-          <div style={{ marginTop: 10 }}>
-            <input
-              type="text"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="Cole o link de uma imagem (URL)..."
+        {/* Hidden File Input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="image/*"
+          style={{ display: "none" }}
+        />
+
+        {/* Image Preview - Instagram Aspect Ratio */}
+        {imagePreview && (
+          <div style={{ marginTop: 12, position: "relative" }}>
+            <div
               style={{
                 width: "100%",
-                background: "#F5EFE3",
-                border: "1px solid rgba(45, 58, 46, 0.12)",
-                borderRadius: 10,
-                padding: "10px 12px",
-                fontSize: 12,
-                color: "#2D3A2E",
-                outline: "none",
-                boxSizing: "border-box",
+                paddingTop: "100%", // 1:1 Aspect ratio (Instagram Square)
+                position: "relative",
+                borderRadius: 16,
+                overflow: "hidden",
+                border: "1.5px solid rgba(45, 58, 46, 0.1)",
+                backgroundColor: "#2D3A2E",
               }}
-            />
+            >
+              <img
+                src={imagePreview}
+                alt="Preview do post"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+            </div>
+
+            <button
+              onClick={() => setImagePreview(null)}
+              style={{
+                position: "absolute",
+                top: 10,
+                right: 10,
+                background: "rgba(45, 58, 46, 0.8)",
+                color: "#FDFBF7",
+                border: "none",
+                borderRadius: "50%",
+                width: 32,
+                height: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+              }}
+              title="Remover foto"
+              aria-label="Remover foto"
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
+        )}
+
+        {isCompressing && (
+          <p style={{ fontSize: 12, color: "#D68C70", marginTop: 8, textAlign: "center" }}>
+            Otimizando imagem para o padrão Instagram...
+          </p>
         )}
 
         {/* Categories Selector */}
@@ -239,29 +347,30 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginTop: 18,
+            marginTop: 16,
             paddingTop: 12,
             borderTop: "1px solid rgba(45, 58, 46, 0.08)",
           }}
         >
           <button
-            onClick={() => setShowImageInput(!showImageInput)}
+            onClick={() => fileInputRef.current?.click()}
             style={{
-              background: showImageInput ? "#E8D7C8" : "transparent",
-              border: "none",
-              borderRadius: 10,
-              padding: "6px 10px",
+              background: imagePreview ? "#E8D7C8" : "#F5EFE3",
+              border: "1px solid rgba(45, 58, 46, 0.12)",
+              borderRadius: 12,
+              padding: "8px 14px",
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 8,
               cursor: "pointer",
               color: "#2D3A2E",
-              fontSize: 12,
+              fontSize: 12.5,
               fontWeight: 500,
+              transition: "all 0.15s ease",
             }}
           >
-            <ImageIcon size={18} color="#D68C70" />
-            <span>{showImageInput ? "Ocultar Imagem" : "Adicionar Foto"}</span>
+            {imagePreview ? <Upload size={16} color="#D68C70" /> : <ImageIcon size={16} color="#D68C70" />}
+            <span>{imagePreview ? "Trocar Foto" : "Fazer Upload de Foto"}</span>
           </button>
 
           <span style={{ fontSize: 11, color: "#7A8A7B" }}>

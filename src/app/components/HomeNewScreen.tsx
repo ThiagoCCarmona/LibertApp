@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
-import { Heart, MessageCircle, Share2, Plus, Trophy, UserPlus, Trash2, Sparkles } from "lucide-react";
+import { Heart, MessageCircle, Share2, Plus, Trophy, UserPlus, Trash2, Sparkles, Bot } from "lucide-react";
 import { NewPostModal } from "./NewPostModal";
 import { PostCommentsModal } from "./PostCommentsModal";
 import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
+import { ChatbotModal } from "./ChatbotModal";
 import { sendNativeMessage } from "../../services/nativeBridge";
 import { apiService, type PostDto } from "../../services/apiService";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
@@ -27,19 +28,28 @@ export function HomeNewScreen({
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewPostOpen, setIsNewPostOpen] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [activeCommentsPost, setActiveCommentsPost] = useState<PostDto | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
 
   // Carrega usuário atual (do localStorage ou da bridge)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("currentUser");
-      if (stored) {
-        setCurrentUser(JSON.parse(stored));
+    const loadStoredUser = () => {
+      try {
+        const stored = localStorage.getItem("currentUser");
+        if (stored) {
+          setCurrentUser(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.warn("Erro lendo currentUser:", e);
       }
-    } catch (e) {
-      console.warn("Erro lendo currentUser:", e);
-    }
+    };
+    loadStoredUser();
+
+    window.addEventListener("user_profile_updated", loadStoredUser);
+    return () => {
+      window.removeEventListener("user_profile_updated", loadStoredUser);
+    };
   }, []);
 
   // Carrega feed da API central da VPS (com fallback para bridge nativa)
@@ -196,7 +206,12 @@ export function HomeNewScreen({
   };
 
   const handleDeletePost = async (postId: number) => {
-    const confirmDelete = window.confirm("Deseja realmente apagar esta publicação?");
+    const isAdmin = !!currentUser?.isAdmin;
+    const confirmDelete = window.confirm(
+      isAdmin
+        ? "Deseja excluir esta publicação? (Ação com privilégios de Administrador)"
+        : "Deseja realmente apagar esta publicação?"
+    );
     if (!confirmDelete) return;
 
     // Atualização otimista
@@ -248,9 +263,26 @@ export function HomeNewScreen({
         <div className="px-6 pt-4 pb-3 flex items-center justify-between">
           <div>
             <p style={{ fontSize: 13, color: "#7A8A7B", fontWeight: 400 }}>Bem-vindo(a),</p>
-            <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", lineHeight: 1.2, marginTop: 1 }}>
-              {displayName} 👋
-            </h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", lineHeight: 1.2, marginTop: 1 }}>
+                {displayName} 👋
+              </h1>
+              {currentUser?.isAdmin && (
+                <span
+                  style={{
+                    background: "#2D3A2E",
+                    color: "#FDFBF7",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: "3px 8px",
+                    borderRadius: 10,
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  ADMIN
+                </span>
+              )}
+            </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <button
@@ -494,11 +526,11 @@ export function HomeNewScreen({
                       </div>
                     </div>
 
-                    {isOwner && (
+                    {(isOwner || currentUser?.isAdmin) && (
                       <button
                         onClick={() => handleDeletePost(post.id)}
                         style={{
-                          background: "none",
+                          background: currentUser?.isAdmin && !isOwner ? "rgba(214,140,112,0.15)" : "none",
                           border: "none",
                           cursor: "pointer",
                           padding: "6px",
@@ -508,7 +540,7 @@ export function HomeNewScreen({
                           alignItems: "center",
                           justifyContent: "center",
                         }}
-                        title="Excluir minha publicação"
+                        title={currentUser?.isAdmin && !isOwner ? "Excluir como Administrador" : "Excluir minha publicação"}
                         aria-label="Excluir publicação"
                       >
                         <Trash2 size={16} />
@@ -521,11 +553,30 @@ export function HomeNewScreen({
                   </p>
 
                   {post.image && (
-                    <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 10 }}>
+                    <div
+                      style={{
+                        width: "100%",
+                        paddingTop: "100%", // Proporção padrão 1:1 estilo Instagram
+                        position: "relative",
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        marginBottom: 10,
+                        backgroundColor: "#2D3A2E",
+                        boxShadow: "0 2px 8px rgba(45,58,46,0.08)",
+                      }}
+                    >
                       <img
                         src={post.image}
-                        alt=""
-                        style={{ width: "100%", maxHeight: 240, objectFit: "cover", display: "block" }}
+                        alt="Foto da publicação"
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block",
+                        }}
                       />
                     </div>
                   )}
@@ -586,7 +637,49 @@ export function HomeNewScreen({
         </div>
       </div>
 
-      {/* FAB */}
+      {/* Botão FAB Chatbot IA (Conselheiro Virtual) posicionado logo acima do botão de post */}
+      <button
+        onClick={() => setIsChatbotOpen(true)}
+        style={{
+          position: "fixed",
+          bottom: 148,
+          right: 20,
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, #2D3A2E 0%, #3D5040 100%)",
+          border: "2px solid rgba(214,140,112,0.45)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 8px 24px rgba(45,58,46,0.35), 0 2px 8px rgba(0,0,0,0.12)",
+          zIndex: 40,
+          transition: "transform 0.15s ease, box-shadow 0.15s ease",
+        }}
+        title="Conversar com Conselheiro Virtual (IA)"
+        aria-label="Conversar com Conselheiro Virtual"
+      >
+        <Bot size={26} color="#FDFBF7" strokeWidth={2} />
+        <span
+          style={{
+            position: "absolute",
+            top: -2,
+            right: -2,
+            background: "#D68C70",
+            color: "#FDFBF7",
+            fontSize: 9,
+            fontWeight: 800,
+            borderRadius: 8,
+            padding: "1px 5px",
+            border: "1.5px solid #FDFBF7",
+          }}
+        >
+          IA
+        </span>
+      </button>
+
+      {/* FAB Novo Post */}
       <button
         onClick={() => setIsNewPostOpen(true)}
         style={{
@@ -617,6 +710,13 @@ export function HomeNewScreen({
         onPublish={handlePublishPost}
       />
 
+      <ChatbotModal
+        isOpen={isChatbotOpen}
+        onClose={() => setIsChatbotOpen(false)}
+        userId={currentUser?.id || 1}
+        userName={currentUser?.nome}
+      />
+
       <PostCommentsModal
         isOpen={activeCommentsPost !== null}
         onClose={() => setActiveCommentsPost(null)}
@@ -628,6 +728,15 @@ export function HomeNewScreen({
             setPosts((prev) =>
               prev.map((p) =>
                 p.id === activeCommentsPost.id ? { ...p, comments: p.comments + 1 } : p
+              )
+            );
+          }
+        }}
+        onDeleteComment={() => {
+          if (activeCommentsPost) {
+            setPosts((prev) =>
+              prev.map((p) =>
+                p.id === activeCommentsPost.id ? { ...p, comments: Math.max(0, p.comments - 1) } : p
               )
             );
           }

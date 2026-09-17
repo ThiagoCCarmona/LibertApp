@@ -32,32 +32,71 @@ const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean; onChange: (val:
   </button>
 );
 
-const Slider = ({ value, max, onChange }: { value: number; max: number; onChange: (val: number) => void }) => (
-  <div style={{ position: "relative", width: "100%", height: 6, background: "#EDE7DA", borderRadius: 3 }}>
-    <div style={{
-      position: "absolute",
-      left: 0,
-      top: 0,
-      height: "100%",
-      width: `${(value / max) * 100}%`,
-      background: "linear-gradient(90deg, #D68C70, #C4785A)",
-      borderRadius: 3,
-    }} />
-    <div style={{
-      position: "absolute",
-      left: `${(value / max) * 100}%`,
-      top: "50%",
-      transform: "translate(-50%, -50%)",
-      width: 20,
-      height: 20,
-      borderRadius: "50%",
-      background: "#D68C70",
-      border: "3px solid #FDFBF7",
-      boxShadow: "0 2px 6px rgba(214,140,112,0.3)",
-      cursor: "pointer",
-    }} />
-  </div>
-);
+const Slider = ({
+  value,
+  min = 1,
+  max = 10,
+  step = 0.5,
+  onChange,
+}: {
+  value: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  onChange: (val: number) => void;
+}) => {
+  const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
+
+  return (
+    <div style={{ position: "relative", width: "100%", height: 32, display: "flex", alignItems: "center" }}>
+      <div style={{ position: "absolute", left: 0, right: 0, height: 8, background: "#EDE7DA", borderRadius: 4, overflow: "hidden" }}>
+        <div
+          style={{
+            height: "100%",
+            width: `${pct}%`,
+            background: "linear-gradient(90deg, #D68C70, #C4785A)",
+            borderRadius: 4,
+            transition: "width 0.1s ease-out",
+          }}
+        />
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        style={{
+          position: "absolute",
+          width: "100%",
+          height: "100%",
+          opacity: 0,
+          cursor: "pointer",
+          zIndex: 2,
+          margin: 0,
+        }}
+        aria-label="Limite de tela diário"
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: `${pct}%`,
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 24,
+          height: 24,
+          borderRadius: "50%",
+          background: "#D68C70",
+          border: "3px solid #FDFBF7",
+          boxShadow: "0 2px 8px rgba(214,140,112,0.4)",
+          pointerEvents: "none",
+          transition: "left 0.1s ease-out",
+        }}
+      />
+    </div>
+  );
+};
 
 export function ProfileScreen({
   onEditProfile,
@@ -114,8 +153,13 @@ export function ProfileScreen({
 
   React.useEffect(() => {
     let isMounted = true;
-    async function loadUser() {
+    const loadUser = async () => {
       try {
+        const stored = localStorage.getItem("currentUser");
+        if (stored && isMounted) {
+          setCurrentUser(JSON.parse(stored));
+        }
+
         const u = await sendNativeMessage("GET_CURRENT_USER");
         if (isMounted && u) {
           setCurrentUser(u);
@@ -123,10 +167,20 @@ export function ProfileScreen({
       } catch (err) {
         console.warn("Erro ao carregar usuário em ProfileScreen:", err);
       }
-    }
+    };
     loadUser();
+
+    const handleUpdate = () => {
+      try {
+        const stored = localStorage.getItem("currentUser");
+        if (stored) setCurrentUser(JSON.parse(stored));
+      } catch {}
+    };
+    window.addEventListener("user_profile_updated", handleUpdate);
+
     return () => {
       isMounted = false;
+      window.removeEventListener("user_profile_updated", handleUpdate);
     };
   }, []);
 
@@ -158,9 +212,26 @@ export function ProfileScreen({
               />
             </div>
             <div style={{ flex: 1 }}>
-              <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E" }}>
-                {displayName}
-              </h1>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", margin: 0 }}>
+                  {displayName}
+                </h1>
+                {currentUser?.isAdmin && (
+                  <span
+                    style={{
+                      background: "#2D3A2E",
+                      color: "#FDFBF7",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "3px 8px",
+                      borderRadius: 8,
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    ADMIN
+                  </span>
+                )}
+              </div>
               <p style={{ fontSize: 13, color: "#7A8A7B", marginTop: 2 }}>{displayEmailOrDate}</p>
             </div>
           </div>
@@ -179,16 +250,25 @@ export function ProfileScreen({
               padding: "14px 12px",
               border: "1px solid rgba(45,58,46,0.08)",
             }}>
-              <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500 }}>Tela Hoje</p>
-              <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: "#D68C70", fontWeight: 400, marginTop: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500, margin: 0 }}>Tela Hoje</p>
+                <span style={{ fontSize: 10, color: "#D68C70", fontWeight: 600 }}>Meta: {dailyLimit}h</span>
+              </div>
+              <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: "#D68C70", fontWeight: 400, marginTop: 4, margin: 0 }}>
                 3h 20m
               </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path d="M2 7 L5 3 L8 7" stroke="#6B8F6D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <p style={{ fontSize: 10, color: "#6B8F6D", fontWeight: 500 }}>↓ 45min</p>
+              <div style={{ marginTop: 6, height: 4, borderRadius: 2, background: "#EDE7DA", overflow: "hidden" }}>
+                <div style={{
+                  height: "100%",
+                  width: `${Math.min(100, Math.round((3.33 / dailyLimit) * 100))}%`,
+                  background: (3.33 / dailyLimit) > 0.9 ? "#E06D53" : "#6B8F6D",
+                  borderRadius: 2,
+                  transition: "width 0.3s ease",
+                }} />
               </div>
+              <p style={{ fontSize: 10, color: (3.33 / dailyLimit) > 0.9 ? "#C44F35" : "#6B8F6D", fontWeight: 500, marginTop: 4, margin: "4px 0 0 0" }}>
+                {Math.round((3.33 / dailyLimit) * 100)}% do limite diário
+              </p>
             </div>
 
             <div style={{
@@ -410,11 +490,12 @@ export function ProfileScreen({
 
               {screenTimeLimit && (
                 <div style={{ paddingTop: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <span style={{ fontSize: 11, color: "#7A8A7B" }}>1h</span>
-                    <span style={{ fontSize: 11, color: "#7A8A7B" }}>8h</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#D68C70" }}>{dailyLimit} horas</span>
+                    <span style={{ fontSize: 11, color: "#7A8A7B" }}>10h</span>
                   </div>
-                  <Slider value={dailyLimit} max={8} onChange={handleChangeDailyLimit} />
+                  <Slider value={dailyLimit} min={1} max={10} step={0.5} onChange={handleChangeDailyLimit} />
                 </div>
               )}
             </div>

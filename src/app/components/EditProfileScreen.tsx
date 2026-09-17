@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, Upload } from "lucide-react";
 import { sendNativeMessage } from "../../services/nativeBridge";
+import { apiService } from "../../services/apiService";
 import { DEFAULT_AVATARS, DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
 export function EditProfileScreen({ onBack }: { onBack: () => void }) {
@@ -13,7 +14,9 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
   });
 
   const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR_URL);
+  const [userId, setUserId] = useState<number>(1);
   const [saved, setSaved] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -31,6 +34,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
         }
 
         if (isMounted && u) {
+          if (u.id) setUserId(u.id);
           setFormData({
             fullName: u.nome || u.Nome || "",
             email: u.email || u.Email || "",
@@ -85,54 +89,101 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
     return value;
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressAvatar = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const size = 360;
+          const canvas = document.createElement("canvas");
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return resolve(e.target?.result as string);
+
+          // Recorte quadrado centralizado
+          const minDim = Math.min(img.width, img.height);
+          const startX = (img.width - minDim) / 2;
+          const startY = (img.height - minDim) / 2;
+
+          ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
+      alert("Por favor, selecione um arquivo de imagem válido.");
       return;
     }
 
-    if (file.size > 3 * 1024 * 1024) {
-      alert("A imagem deve ter no máximo 3MB.");
-      return;
+    try {
+      setIsUploading(true);
+      const compressed = await compressAvatar(file);
+      setAvatarUrl(compressed);
+    } catch (err) {
+      console.warn("Erro ao processar foto de perfil:", err);
+      alert("Não foi possível carregar a imagem.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      if (dataUrl) {
-        setAvatarUrl(dataUrl);
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleSave = async () => {
     try {
-      await sendNativeMessage("UPDATE_PROFILE", {
-        nome: formData.fullName,
-        email: formData.email,
-        telefone: formData.phone,
-        cpf: formData.cpf,
-        localizacao: formData.location,
-        fotoUrl: avatarUrl,
-      });
-
-      // Atualiza também o cache local
-      const cur = localStorage.getItem("currentUser");
-      if (cur) {
-        const u = JSON.parse(cur);
-        u.nome = formData.fullName;
-        u.email = formData.email;
-        u.telefone = formData.phone;
-        u.cpf = formData.cpf;
-        u.localizacao = formData.location;
-        u.fotoUrl = avatarUrl;
-        localStorage.setItem("currentUser", JSON.stringify(u));
+      // 1. Salva na API Central
+      try {
+        await apiService.updateProfile({
+          id: userId,
+          nome: formData.fullName,
+          telefone: formData.phone,
+          cpf: formData.cpf,
+          localizacao: formData.location,
+          fotoUrl: avatarUrl,
+        });
+      } catch (apiErr) {
+        console.warn("API indisponível para updateProfile, tentando bridge nativo:", apiErr);
       }
+
+      // 2. Tenta Bridge nativo
+      try {
+        await sendNativeMessage("UPDATE_PROFILE", {
+          nome: formData.fullName,
+          email: formData.email,
+          telefone: formData.phone,
+          cpf: formData.cpf,
+          localizacao: formData.location,
+          fotoUrl: avatarUrl,
+        });
+      } catch {}
+
+      // 3. Atualiza cache local
+      const cur = localStorage.getItem("currentUser");
+      let u: any = {};
+      if (cur) u = JSON.parse(cur);
+      u.nome = formData.fullName;
+      u.email = formData.email;
+      u.telefone = formData.phone;
+      u.cpf = formData.cpf;
+      u.localizacao = formData.location;
+      u.fotoUrl = avatarUrl;
+      localStorage.setItem("currentUser", JSON.stringify(u));
+
+      // 4. Notifica todas as telas abertas em tempo real
+      window.dispatchEvent(new CustomEvent("user_profile_updated", { detail: u }));
     } catch (err) {
-      console.warn("Erro ao atualizar perfil no backend:", err);
+      console.warn("Erro ao atualizar perfil:", err);
     }
 
     setSaved(true);

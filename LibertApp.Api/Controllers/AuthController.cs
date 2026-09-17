@@ -130,7 +130,8 @@ public class AuthController : ControllerBase
         numeroCarteira = u.NumeroCarteira,
         fotoUrl = u.FotoUrl,
         pontos = u.Pontos,
-        nivel = u.Nivel
+        nivel = u.Nivel,
+        isAdmin = u.IsAdmin
     };
 }
 

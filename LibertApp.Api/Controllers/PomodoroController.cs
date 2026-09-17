@@ -115,7 +115,75 @@ public class PomodoroController : ControllerBase
 
         return Ok(new { desafioId = id, completed = novoStatus, totalPontos = user.Pontos, nivel = user.Nivel });
     }
+
+    [HttpPost("desafios")]
+    public async Task<IActionResult> CreateDesafio([FromBody] CreateDesafioRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Titulo))
+        {
+            return BadRequest(new { message = "O título da meta é obrigatório." });
+        }
+
+        var desafio = new Desafio
+        {
+            Titulo = request.Titulo.Trim(),
+            Categoria = string.IsNullOrWhiteSpace(request.Categoria) ? "daily" : request.Categoria.ToLower(),
+            PontosRecompensa = request.PontosRecompensa > 0 ? request.PontosRecompensa : 50,
+            Ativo = true
+        };
+
+        _context.Desafios.Add(desafio);
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            id = desafio.Id,
+            title = desafio.Titulo,
+            category = desafio.Categoria,
+            points = desafio.PontosRecompensa,
+            completed = false
+        });
+    }
+
+    [HttpPut("desafios/{id}")]
+    public async Task<IActionResult> UpdateDesafio(int id, [FromBody] UpdateDesafioRequest request)
+    {
+        var desafio = await _context.Desafios.FindAsync(id);
+        if (desafio == null) return NotFound(new { message = "Meta não encontrada." });
+
+        if (!string.IsNullOrWhiteSpace(request.Titulo)) desafio.Titulo = request.Titulo.Trim();
+        if (!string.IsNullOrWhiteSpace(request.Categoria)) desafio.Categoria = request.Categoria.ToLower();
+        if (request.PontosRecompensa.HasValue && request.PontosRecompensa.Value > 0)
+            desafio.PontosRecompensa = request.PontosRecompensa.Value;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            id = desafio.Id,
+            title = desafio.Titulo,
+            category = desafio.Categoria,
+            points = desafio.PontosRecompensa
+        });
+    }
+
+    [HttpDelete("desafios/{id}")]
+    public async Task<IActionResult> DeleteDesafio(int id)
+    {
+        var desafio = await _context.Desafios.FindAsync(id);
+        if (desafio == null) return NotFound(new { message = "Meta não encontrada." });
+
+        _context.Desafios.Remove(desafio);
+
+        var usuarioDesafios = await _context.UsuariosDesafios.Where(ud => ud.DesafioId == id).ToListAsync();
+        _context.UsuariosDesafios.RemoveRange(usuarioDesafios);
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Meta excluída com sucesso." });
+    }
 }
 
 public record RecordSessionRequest(int UsuarioId, string Tipo, int Minutos);
 public record ToggleDesafioRequest(int UsuarioId);
+public record CreateDesafioRequest(string Titulo, string Categoria, int PontosRecompensa);
+public record UpdateDesafioRequest(string? Titulo, string? Categoria, int? PontosRecompensa);

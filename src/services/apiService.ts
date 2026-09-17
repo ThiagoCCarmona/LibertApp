@@ -35,9 +35,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     ...(options.headers || {}),
   };
 
-  // Timeout de 2.5s para não prender a interface caso a VPS central esteja inacessível
+  // Timeout de 5s para permitir envio seguro de imagens mesmo em conexões lentas
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 2500);
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
 
   try {
     const res = await fetch(url, { ...options, headers, signal: controller.signal });
@@ -71,6 +71,7 @@ export interface UserDto {
   fotoUrl?: string;
   pontos: number;
   nivel: number;
+  isAdmin?: boolean;
 }
 
 export interface PostDto {
@@ -210,6 +211,12 @@ export const apiService = {
     });
   },
 
+  async deleteComment(commentId: number, callerId: number): Promise<{ message: string }> {
+    return request<{ message: string }>(`/api/feed/comments/${commentId}?callerId=${callerId}`, {
+      method: "DELETE",
+    });
+  },
+
   // Busca e Colegas
   async searchUsers(termo: string, callerId: number, apenasSeguindo: boolean = false): Promise<SearchUserDto[]> {
     const params = new URLSearchParams({
@@ -247,6 +254,26 @@ export const apiService = {
     return request<any>(`/api/pomodoro/desafios/${id}/toggle`, {
       method: "POST",
       body: JSON.stringify({ usuarioId }),
+    });
+  },
+
+  async createDesafio(data: { titulo: string; categoria: string; pontosRecompensa: number }): Promise<any> {
+    return request<any>("/api/pomodoro/desafios", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateDesafio(id: number, data: { titulo?: string; categoria?: string; pontosRecompensa?: number }): Promise<any> {
+    return request<any>(`/api/pomodoro/desafios/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteDesafio(id: number): Promise<{ message: string }> {
+    return request<{ message: string }>(`/api/pomodoro/desafios/${id}`, {
+      method: "DELETE",
     });
   },
 
