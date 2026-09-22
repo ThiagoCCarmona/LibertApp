@@ -47,7 +47,7 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
 
       let found = users.find((u) => u.email?.toLowerCase() === email?.toLowerCase());
 
-      if (found && (!found.senha || found.senha === senha)) {
+      if (found && found.senha === senha) {
         localStorage.setItem("currentUser", JSON.stringify(found));
         return found as T;
       }
@@ -170,8 +170,8 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
         icon: parsedPayload.icon || "🏔️",
       };
 
-      feed.unshift(newPost);
-      localStorage.setItem("libertapp_feed", JSON.stringify(feed));
+      posts.unshift(newPost);
+      localStorage.setItem("libertapp_posts", JSON.stringify(posts));
 
       // Bonificação
       if (currentUser) {
@@ -183,14 +183,14 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
     }
 
     case "LIKE_POST": {
-      const feedJson = localStorage.getItem("libertapp_feed");
-      if (feedJson) {
-        const feed: any[] = JSON.parse(feedJson);
-        const post = feed.find((p) => p.id === parsedPayload.postId);
+      const postsJson = localStorage.getItem("libertapp_posts");
+      if (postsJson) {
+        const posts: any[] = JSON.parse(postsJson);
+        const post = posts.find((p) => p.id === parsedPayload.postId);
         if (post) {
           post.likes = (post.likes || 0) + 1;
           post.liked = true;
-          localStorage.setItem("libertapp_feed", JSON.stringify(feed));
+          localStorage.setItem("libertapp_posts", JSON.stringify(posts));
           return { postId: post.id, likes: post.likes } as T;
         }
       }
@@ -271,6 +271,35 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
           isFollowing: follows.includes(u.id),
           bio: u.bio || "Membro da Comunidade Carmelita.",
         })) as T;
+    }
+
+    case "GET_DESAFIOS": {
+      const saved = localStorage.getItem("libertapp_challenges_v2");
+      const grouped = saved ? JSON.parse(saved) : null;
+      if (!grouped) return [] as T;
+
+      const flat: any[] = [];
+      Object.keys(grouped).forEach((cat) => {
+        (grouped[cat] || []).forEach((c: any) => {
+          flat.push({ id: c.id, titulo: c.title, categoria: cat, pontosRecompensa: c.points, completed: c.completed });
+        });
+      });
+      return flat as T;
+    }
+
+    case "TOGGLE_DESAFIO": {
+      const id = Number(typeof parsedPayload === "object" ? parsedPayload?.id : parsedPayload);
+      const saved = localStorage.getItem("libertapp_challenges_v2");
+      const grouped = saved ? JSON.parse(saved) : null;
+      if (grouped) {
+        Object.keys(grouped).forEach((cat) => {
+          grouped[cat] = (grouped[cat] || []).map((c: any) =>
+            c.id === id ? { ...c, completed: !c.completed } : c
+          );
+        });
+        localStorage.setItem("libertapp_challenges_v2", JSON.stringify(grouped));
+      }
+      return { success: true } as T;
     }
 
     case "RECORD_POMODORO": {

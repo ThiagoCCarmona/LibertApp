@@ -2,8 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LibertApp.Api.Data;
 using LibertApp.Api.Data.Entities;
-using System.Security.Cryptography;
-using System.Text;
+using LibertApp.Api.Security;
 
 namespace LibertApp.Api.Controllers;
 
@@ -39,7 +38,7 @@ public class AuthController : ControllerBase
         {
             Nome = request.Nome.Trim(),
             Email = emailLower,
-            SenhaHash = HashPassword(request.Senha),
+            SenhaHash = PasswordHasher.Hash(request.Senha),
             Telefone = request.Telefone ?? string.Empty,
             CPF = request.CPF ?? string.Empty,
             Curso = request.Curso ?? "Estudante Carmelita",
@@ -68,7 +67,7 @@ public class AuthController : ControllerBase
         var emailLower = request.Email.Trim().ToLower();
         var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailLower);
 
-        if (user == null || user.SenhaHash != HashPassword(request.Senha))
+        if (user == null || !PasswordHasher.Verify(request.Senha, user.SenhaHash))
         {
             return Unauthorized(new { message = "E-mail ou senha incorretos." });
         }
@@ -76,6 +75,12 @@ public class AuthController : ControllerBase
         if (!user.Ativo)
         {
             return Unauthorized(new { message = "Sua conta foi desativada pela coordenação/administração." });
+        }
+
+        if (PasswordHasher.NeedsRehash(user.SenhaHash))
+        {
+            user.SenhaHash = PasswordHasher.Hash(request.Senha);
+            await _context.SaveChangesAsync();
         }
 
         return Ok(ToDto(user));
@@ -90,10 +95,16 @@ public class AuthController : ControllerBase
     }
 
     [HttpPut("profile")]
-    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request, [FromQuery] int callerId)
     {
         var user = await _context.Usuarios.FindAsync(request.Id);
         if (user == null) return NotFound(new { message = "Usuário não encontrado." });
+
+        if (callerId != request.Id)
+        {
+            var caller = await _context.Usuarios.FindAsync(callerId);
+            if (caller == null || !caller.IsAdmin) return Forbid();
+        }
 
         user.Nome = !string.IsNullOrWhiteSpace(request.Nome) ? request.Nome.Trim() : user.Nome;
         user.Telefone = request.Telefone ?? user.Telefone;
@@ -119,14 +130,6 @@ public class AuthController : ControllerBase
 
         // Simula envio de instruções de recuperação
         return Ok(new { message = "Instruções para redefinição de acesso foram geradas com sucesso." });
-    }
-
-    private static string HashPassword(string password)
-    {
-        using var sha = SHA256.Create();
-        var bytes = Encoding.UTF8.GetBytes(password);
-        var hash = sha.ComputeHash(bytes);
-        return Convert.ToHexString(hash);
     }
 
     private static object ToDto(Usuario u) => new

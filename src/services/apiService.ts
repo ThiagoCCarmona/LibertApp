@@ -35,9 +35,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     ...(options.headers || {}),
   };
 
-  // Timeout de 5s para permitir envio seguro de imagens mesmo em conexões lentas
+  // Timeout generoso para suportar envio de imagens (até 20MB) mesmo em conexões lentas
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
 
   try {
     const res = await fetch(url, { ...options, headers, signal: controller.signal });
@@ -48,7 +48,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
         const errorJson = await res.json();
         errMsg = errorJson.message || errMsg;
       } catch {}
-      throw new Error(errMsg);
+      // status presente indica que o servidor respondeu (não foi falha de rede) — chamadores
+      // usam isso para distinguir um erro real (ex.: senha incorreta) de indisponibilidade da API
+      const httpError = new Error(errMsg) as Error & { status?: number };
+      httpError.status = res.status;
+      throw httpError;
     }
     return await res.json();
   } catch (err: any) {
@@ -56,6 +60,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     console.warn(`[ApiService Error] Falha na chamada ${endpoint}:`, err);
     throw err;
   }
+}
+
+/** true quando o erro veio de uma resposta HTTP real do servidor (não falha de rede/timeout) */
+export function isServerRespondedError(err: any): boolean {
+  return typeof err?.status === "number";
 }
 
 export interface UserDto {
@@ -100,6 +109,7 @@ export interface CommentDto {
   text: string;
   time: string;
   likes: number;
+  liked?: boolean;
 }
 
 export interface SearchUserDto {
@@ -155,7 +165,7 @@ export const apiService = {
     localizacao?: string;
     fotoUrl?: string;
   }): Promise<UserDto> {
-    return request<UserDto>("/api/auth/profile", {
+    return request<UserDto>(`/api/auth/profile?callerId=${data.id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
@@ -194,8 +204,9 @@ export const apiService = {
     });
   },
 
-  async getComments(postId: number): Promise<CommentDto[]> {
-    return request<CommentDto[]>(`/api/feed/${postId}/comments`);
+  async getComments(postId: number, callerId?: number): Promise<CommentDto[]> {
+    const query = callerId ? `?callerId=${callerId}` : "";
+    return request<CommentDto[]>(`/api/feed/${postId}/comments${query}`);
   },
 
   async addComment(postId: number, usuarioId: number, texto: string): Promise<CommentDto> {

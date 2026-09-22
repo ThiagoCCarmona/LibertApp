@@ -20,13 +20,6 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("splash");
   const [activeTab, setActiveTab] = useState<Tab>("home");
 
-  // Modo dev: navegação livre (sem autoplay automático)
-  // Desative para percorrer manualmente.
-  const DEV_AUTOPLAY_ALL_SCREENS = false;
-
-
-
-
   useEffect(() => {
     // Sempre mostrar splash ao abrir (Telas 1 -> 2)
     const timer = setTimeout(() => {
@@ -36,19 +29,9 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-
-
-
   const handleSplashComplete = () => {
-    // Quando em modo dev autopercurso: imediatamente manda para a tela de login
     setCurrentScreen("login");
     localStorage.setItem("splashShown", "true");
-
-    // sem autoplay: navegação manual via botões
-    if (DEV_AUTOPLAY_ALL_SCREENS) {
-      // noop (mantido por compatibilidade com versões anteriores)
-    }
-
   };
 
 
@@ -69,15 +52,6 @@ export default function App() {
 
     setCurrentScreen(screen);
   };
-
-
-
-  const handleLogin = () => {
-    // fluxo normal de login (ou login simulado em modo DEV_SIMULATED_LOGIN)
-    setCurrentScreen("main");
-    localStorage.setItem("isLoggedIn", "true");
-  };
-
 
   const handleShowLeaderboard = () => {
     setCurrentScreen("leaderboard");

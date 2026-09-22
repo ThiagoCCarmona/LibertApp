@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
-using System.Text;
 using LibertApp.Api.Data;
 using LibertApp.Api.Data.Entities;
+using LibertApp.Api.Security;
 
 namespace LibertApp.Api.Controllers;
 
@@ -83,6 +82,9 @@ public class AdminController : ControllerBase
         var likes = await _context.PostLikes.Where(l => l.UsuarioId == id).ToListAsync();
         _context.PostLikes.RemoveRange(likes);
 
+        var commentLikes = await _context.CommentLikes.Where(l => l.UsuarioId == id).ToListAsync();
+        _context.CommentLikes.RemoveRange(commentLikes);
+
         var follows = await _context.UsuarioSeguidores.Where(s => s.SeguidorId == id || s.SeguidoId == id).ToListAsync();
         _context.UsuarioSeguidores.RemoveRange(follows);
 
@@ -141,9 +143,7 @@ public class AdminController : ControllerBase
         var user = await _context.Usuarios.FindAsync(id);
         if (user == null) return NotFound(new { message = "Usuário não encontrado." });
 
-        using var sha = SHA256.Create();
-        var bytes = Encoding.UTF8.GetBytes(request.NewPassword.Trim());
-        user.SenhaHash = Convert.ToHexString(sha.ComputeHash(bytes));
+        user.SenhaHash = PasswordHasher.Hash(request.NewPassword.Trim());
 
         await _context.SaveChangesAsync();
 

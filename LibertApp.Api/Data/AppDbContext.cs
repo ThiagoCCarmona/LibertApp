@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
     public DbSet<FeedPost> FeedPosts => Set<FeedPost>();
     public DbSet<PostComentario> PostComentarios => Set<PostComentario>();
     public DbSet<PostLike> PostLikes => Set<PostLike>();
+    public DbSet<CommentLike> CommentLikes => Set<CommentLike>();
     public DbSet<UsuarioSeguidor> UsuarioSeguidores => Set<UsuarioSeguidor>();
     public DbSet<Desafio> Desafios => Set<Desafio>();
     public DbSet<UsuarioDesafio> UsuariosDesafios => Set<UsuarioDesafio>();

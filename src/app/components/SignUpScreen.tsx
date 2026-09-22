@@ -145,12 +145,16 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
       };
 
       // Tenta chamar a API central na VPS primeiro
-      const { apiService } = await import("../../services/apiService");
+      const { apiService, isServerRespondedError } = await import("../../services/apiService");
       let user: any = null;
 
       try {
         user = await apiService.register(payload);
-      } catch (apiErr) {
+      } catch (apiErr: any) {
+        if (isServerRespondedError(apiErr)) {
+          // O servidor respondeu (ex.: e-mail já cadastrado) — não mascara com fallback local
+          throw apiErr;
+        }
         console.log("API central não respondeu, usando bridge nativa/local:", apiErr);
         const { sendNativeMessage } = await import("../../services/nativeBridge");
         user = await sendNativeMessage("REGISTER_USER", payload);
@@ -161,7 +165,7 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
         localStorage.setItem("currentUser", JSON.stringify(user));
         onNavigate("home");
       } else {
-        onNavigate("home");
+        setErrorMessage("Não foi possível criar sua conta. Tente novamente.");
       }
     } catch (err: any) {
       setErrorMessage(err?.message || "Erro ao criar conta. Tente novamente.");

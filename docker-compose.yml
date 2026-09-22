@@ -13,6 +13,11 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
+      # Opcional: define a senha das contas semeadas no primeiro start (Administrador e
+      # usuária de demonstração). Se omitido, uma senha aleatória é gerada e impressa
+      # uma única vez nos logs do container (`docker logs libertapp_backend`).
+      # - AdminSeed__Password=defina-uma-senha-forte-aqui
+      # - DemoUserSeed__Password=defina-uma-senha-forte-aqui
     volumes:
       # Persiste o banco SQLite central mesmo ao reiniciar ou recriar containers
       - libertapp_data:/app/data

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using LibertApp.Api.Data;
+using LibertApp.Api.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,41 +46,60 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
     db.Database.EnsureCreated();
 
-    // Migrações dinâmicas no banco SQLite existente
-    try
+    // Migrações dinâmicas no banco SQLite existente.
+    // Só ignora o erro esperado de "coluna/tabela já existe"; qualquer outra falha (disco cheio,
+    // permissão, banco bloqueado) é logada para não passar despercebida.
+    void RunMigrationStatement(string sql)
     {
-        db.Database.ExecuteSqlRaw("ALTER TABLE Usuarios ADD COLUMN IsAdmin INTEGER NOT NULL DEFAULT 0;");
+        try
+        {
+            db.Database.ExecuteSqlRaw(sql);
+        }
+        catch (Exception ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase)
+            || ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+        {
+            // Coluna/tabela já existe: migração já aplicada anteriormente, ignora.
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Falha ao aplicar migração dinâmica: {Sql}", sql);
+        }
     }
-    catch { /* Coluna já existe */ }
 
-    try
-    {
-        db.Database.ExecuteSqlRaw("ALTER TABLE Usuarios ADD COLUMN Ativo INTEGER NOT NULL DEFAULT 1;");
-    }
-    catch { /* Coluna já existe */ }
+    RunMigrationStatement("ALTER TABLE Usuarios ADD COLUMN IsAdmin INTEGER NOT NULL DEFAULT 0;");
+    RunMigrationStatement("ALTER TABLE Usuarios ADD COLUMN Ativo INTEGER NOT NULL DEFAULT 1;");
+    RunMigrationStatement(@"CREATE TABLE IF NOT EXISTS CommentLikes (
+        Id INTEGER NOT NULL CONSTRAINT PK_CommentLikes PRIMARY KEY AUTOINCREMENT,
+        ComentarioId INTEGER NOT NULL,
+        UsuarioId INTEGER NOT NULL,
+        DataCriacao TEXT NOT NULL
+    );");
 
     // O Administrador não compete nem acumula pontos no pódio
-    try
-    {
-        db.Database.ExecuteSqlRaw("UPDATE Usuarios SET Pontos = 0 WHERE IsAdmin = 1;");
-    }
-    catch { }
+    RunMigrationStatement("UPDATE Usuarios SET Pontos = 0 WHERE IsAdmin = 1;");
 
     // 1. Seed do usuário Administrador
+    // Senha vem de configuração (env var AdminSeed__Password); se não informada, gera uma
+    // senha aleatória e a imprime no log apenas no momento da criação (não fica em código-fonte).
     var adminEmail = "admin@libertapp.com.br";
     var adminUser = db.Usuarios.FirstOrDefault(u => u.Email.ToLower() == adminEmail);
     if (adminUser == null)
     {
-        using var sha = System.Security.Cryptography.SHA256.Create();
-        var hash = Convert.ToHexString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes("admin123")));
+        var adminPassword = builder.Configuration["AdminSeed:Password"];
+        var generatedAdminPassword = string.IsNullOrWhiteSpace(adminPassword);
+        if (generatedAdminPassword)
+        {
+            adminPassword = PasswordHasher.GenerateRandomPassword();
+        }
 
         db.Usuarios.Add(new LibertApp.Api.Data.Entities.Usuario
         {
             Nome = "Administrador Geral",
             Email = adminEmail,
-            SenhaHash = hash,
+            SenhaHash = PasswordHasher.Hash(adminPassword!),
             Telefone = "(11) 99999-9999",
             CPF = "000.000.000-00",
             Curso = "Coordenação Geral",
@@ -94,6 +114,14 @@ using (var scope = app.Services.CreateScope())
             DataCriacao = DateTime.UtcNow
         });
         db.SaveChanges();
+
+        if (generatedAdminPassword)
+        {
+            logger.LogWarning(
+                "Conta de Administrador criada: {Email} / senha gerada automaticamente: {Password} " +
+                "— anote agora, ela não será exibida novamente. Para definir uma senha própria, configure AdminSeed__Password.",
+                adminEmail, adminPassword);
+        }
     }
     else
     {
@@ -104,18 +132,22 @@ using (var scope = app.Services.CreateScope())
         if (changed) db.SaveChanges();
     }
 
-    // 2. Seed da usuária padrão Silvia Mendes
+    // 2. Seed da usuária de demonstração Silvia Mendes (perfil de exemplo para o ranking/feed)
     var silviaEmail = "silvia.mendes@email.com";
     if (!db.Usuarios.Any(u => u.Email.ToLower() == silviaEmail))
     {
-        using var sha = System.Security.Cryptography.SHA256.Create();
-        var hash = Convert.ToHexString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes("123456")));
+        var demoPassword = builder.Configuration["DemoUserSeed:Password"];
+        var generatedDemoPassword = string.IsNullOrWhiteSpace(demoPassword);
+        if (generatedDemoPassword)
+        {
+            demoPassword = PasswordHasher.GenerateRandomPassword();
+        }
 
         db.Usuarios.Add(new LibertApp.Api.Data.Entities.Usuario
         {
             Nome = "Silvia Mendes",
             Email = silviaEmail,
-            SenhaHash = hash,
+            SenhaHash = PasswordHasher.Hash(demoPassword!),
             Telefone = "(11) 98765-4321",
             CPF = "123.456.789-00",
             Curso = "Psicologia • 4º Semestre",
@@ -129,6 +161,14 @@ using (var scope = app.Services.CreateScope())
             DataCriacao = DateTime.UtcNow
         });
         db.SaveChanges();
+
+        if (generatedDemoPassword)
+        {
+            logger.LogWarning(
+                "Conta de demonstração criada: {Email} / senha gerada automaticamente: {Password} " +
+                "— anote agora, ela não será exibida novamente. Para definir uma senha própria, configure DemoUserSeed__Password.",
+                silviaEmail, demoPassword);
+        }
     }
 }
 

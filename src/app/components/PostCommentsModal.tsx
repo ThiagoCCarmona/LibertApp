@@ -58,7 +58,7 @@ export function PostCommentsModal({
       try {
         // 1. Busca da API central
         try {
-          const apiComments = await apiService.getComments(postId!);
+          const apiComments = await apiService.getComments(postId!, currentUser?.id);
           if (isMounted && apiComments && Array.isArray(apiComments)) {
             const mapped: CommentItem[] = apiComments.map((c: any) => ({
               id: c.id,
@@ -67,6 +67,7 @@ export function PostCommentsModal({
               text: c.text || "",
               time: c.time || "Recente",
               likes: c.likes || 0,
+              liked: !!c.liked,
               userId: c.usuarioId,
             }));
             setComments(mapped);

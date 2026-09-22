@@ -14,7 +14,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
   });
 
   const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR_URL);
-  const [userId, setUserId] = useState<number>(1);
+  const [userId, setUserId] = useState<number>(0);
   const [saved, setSaved] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -141,6 +141,10 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
   };
 
   const handleSave = async () => {
+    if (!userId) {
+      console.warn("EditProfileScreen: usuário ainda não carregado, cancelando salvamento.");
+      return;
+    }
     try {
       // 1. Salva na API Central
       try {

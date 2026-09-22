@@ -20,6 +20,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
+  const [rankingOutOfDate, setRankingOutOfDate] = useState(false);
 
   useEffect(() => {
     try {
@@ -46,6 +47,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
           }));
           setRanking(mapped);
           setIsLoading(false);
+          setRankingOutOfDate(true);
         }
       } catch {}
 
@@ -63,9 +65,11 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             curso: u.curso || u.Curso || u.department || "",
           }));
           setRanking(mapped);
+          setRankingOutOfDate(false);
         }
       } catch (apiErr) {
         console.warn("API VPS indisponível para ranking:", apiErr);
+        // Mantém o ranking local (se houver) visível, mas sinaliza que não é o oficial/atualizado
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -120,6 +124,23 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             🏆 Pódio da Feira
           </h1>
         </div>
+
+        {rankingOutOfDate && (
+          <div className="px-6 pb-3">
+            <div
+              style={{
+                background: "rgba(214,140,112,0.12)",
+                border: "1px solid rgba(214,140,112,0.4)",
+                borderRadius: 10,
+                padding: "8px 12px",
+                color: "#8A5A42",
+                fontSize: 12,
+              }}
+            >
+              Mostrando um ranking salvo neste dispositivo — não foi possível confirmar com o servidor central.
+            </div>
+          </div>
+        )}
 
         {/* Loading or Empty State */}
         {isLoading ? (

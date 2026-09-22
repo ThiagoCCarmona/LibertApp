@@ -147,24 +147,30 @@ public class FeedController : ControllerBase
     }
 
     [HttpGet("{id}/comments")]
-    public async Task<IActionResult> GetComments(int id)
+    public async Task<IActionResult> GetComments(int id, [FromQuery] int? callerId)
     {
         var comments = await _context.PostComentarios
             .Where(c => c.PostId == id)
             .OrderBy(c => c.DataCriacao)
-            .Select(c => new
-            {
-                id = c.Id,
-                author = c.AutorNome,
-                avatar = c.AutorAvatar,
-                curso = c.AutorCurso,
-                text = c.Texto,
-                time = GetRelativeTime(c.DataCriacao),
-                likes = c.Likes
-            })
             .ToListAsync();
 
-        return Ok(comments);
+        var likedCommentIds = callerId.HasValue
+            ? await _context.CommentLikes.Where(l => l.UsuarioId == callerId.Value).Select(l => l.ComentarioId).ToListAsync()
+            : new List<int>();
+
+        var result = comments.Select(c => new
+        {
+            id = c.Id,
+            author = c.AutorNome,
+            avatar = c.AutorAvatar,
+            curso = c.AutorCurso,
+            text = c.Texto,
+            time = GetRelativeTime(c.DataCriacao),
+            likes = c.Likes,
+            liked = likedCommentIds.Contains(c.Id)
+        });
+
+        return Ok(result);
     }
 
     [HttpPost("{id}/comment")]
@@ -249,11 +255,28 @@ public class FeedController : ControllerBase
         var comentario = await _context.PostComentarios.FindAsync(id);
         if (comentario == null) return NotFound(new { message = "Comentário não encontrado." });
 
-        // Incrementa curtida do comentário
-        comentario.Likes += 1;
+        var existing = await _context.CommentLikes
+            .FirstOrDefaultAsync(l => l.ComentarioId == id && l.UsuarioId == request.UsuarioId);
+
+        bool isLiked;
+        if (existing != null)
+        {
+            _context.CommentLikes.Remove(existing);
+            isLiked = false;
+        }
+        else
+        {
+            _context.CommentLikes.Add(new CommentLike { ComentarioId = id, UsuarioId = request.UsuarioId, DataCriacao = DateTime.UtcNow });
+            isLiked = true;
+        }
+
         await _context.SaveChangesAsync();
 
-        return Ok(new { commentId = id, likes = comentario.Likes, liked = true });
+        var totalLikes = await _context.CommentLikes.CountAsync(l => l.ComentarioId == id);
+        comentario.Likes = totalLikes;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { commentId = id, likes = totalLikes, liked = isLiked });
     }
 
     [HttpGet("user/{usuarioId}")]

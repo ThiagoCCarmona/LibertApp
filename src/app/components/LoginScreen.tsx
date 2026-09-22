@@ -45,12 +45,16 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
     setErrorMessage("");
 
     try {
-      const { apiService } = await import("../../services/apiService");
+      const { apiService, isServerRespondedError } = await import("../../services/apiService");
       let user: any = null;
 
       try {
         user = await apiService.login(email.trim(), senha.trim());
-      } catch (apiErr) {
+      } catch (apiErr: any) {
+        if (isServerRespondedError(apiErr)) {
+          // O servidor respondeu (ex.: senha incorreta, conta desativada) — não mascara com fallback local
+          throw apiErr;
+        }
         console.log("API central não respondeu, tentando bridge local:", apiErr);
         const { sendNativeMessage } = await import("../../services/nativeBridge");
         user = await sendNativeMessage("LOGIN_USER", {
