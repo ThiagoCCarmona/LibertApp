@@ -89,6 +89,7 @@ export interface PostDto {
   author: string;
   avatar: string;
   curso?: string;
+  seguindo?: boolean;
   type: string;
   content: string;
   image?: string;
@@ -110,6 +111,30 @@ export interface CommentDto {
   time: string;
   likes: number;
   liked?: boolean;
+}
+
+export interface ConquistaDto {
+  id: number;
+  titulo: string;
+  descricao: string;
+  icone: string;
+  tipo: string;
+  meta: number;
+  pontosRecompensa: number;
+  progresso: number;
+  desbloqueada: boolean;
+  dataConquistada?: string | null;
+}
+
+export interface ConquistaAdminDto {
+  id: number;
+  titulo: string;
+  descricao: string;
+  icone: string;
+  tipo: string;
+  meta: number;
+  pontosRecompensa: number;
+  ativo: boolean;
 }
 
 export interface SearchUserDto {
@@ -137,6 +162,7 @@ export const apiService = {
     curso?: string;
     bio?: string;
     fotoUrl?: string;
+    localizacao?: string;
   }): Promise<UserDto> {
     return request<UserDto>("/api/auth/register", {
       method: "POST",
@@ -179,9 +205,12 @@ export const apiService = {
   },
 
   // Feed da Comunidade
-  async getFeed(callerId?: number): Promise<PostDto[]> {
-    const query = callerId ? `?callerId=${callerId}` : "";
-    return request<PostDto[]>(`/api/feed${query}`);
+  async getFeed(callerId?: number, priorizarSeguindo?: boolean): Promise<PostDto[]> {
+    const params = new URLSearchParams();
+    if (callerId) params.set("callerId", callerId.toString());
+    if (priorizarSeguindo) params.set("priorizarSeguindo", "true");
+    const query = params.toString();
+    return request<PostDto[]>(`/api/feed${query ? `?${query}` : ""}`);
   },
 
   async createPost(data: {
@@ -277,6 +306,15 @@ export const apiService = {
     return request<any>(`/api/users/${id}/profile?callerId=${callerId}`);
   },
 
+  async getWellnessSummary(usuarioId: number): Promise<{
+    pomodoroMinutosSemana: number;
+    atividadesSemana: number;
+    sequenciaDias: number;
+    bemEstarScore: number;
+  }> {
+    return request(`/api/users/${usuarioId}/wellness-summary`);
+  },
+
   async toggleFollow(id: number, callerId: number): Promise<{ seguidoId: number; isFollowing: boolean }> {
     return request<{ seguidoId: number; isFollowing: boolean }>(`/api/users/${id}/follow`, {
       method: "POST",
@@ -332,5 +370,49 @@ export const apiService = {
   async getBenefits(usuarioId?: number): Promise<any> {
     const query = usuarioId ? `?usuarioId=${usuarioId}` : "";
     return request<any>(`/api/benefits${query}`);
+  },
+
+  // Conquistas (Achievements)
+  async getMinhasConquistas(usuarioId: number): Promise<ConquistaDto[]> {
+    return request<ConquistaDto[]>(`/api/achievements?usuarioId=${usuarioId}`);
+  },
+
+  async getConquistasAdmin(callerId: number): Promise<ConquistaAdminDto[]> {
+    return request<ConquistaAdminDto[]>(`/api/achievements/admin?callerId=${callerId}`);
+  },
+
+  async createConquista(callerId: number, data: {
+    titulo: string;
+    descricao?: string;
+    icone?: string;
+    tipo: string;
+    meta: number;
+    pontosRecompensa: number;
+  }): Promise<{ message: string; id: number }> {
+    return request<{ message: string; id: number }>(`/api/achievements?callerId=${callerId}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateConquista(id: number, callerId: number, data: Partial<{
+    titulo: string;
+    descricao: string;
+    icone: string;
+    tipo: string;
+    meta: number;
+    pontosRecompensa: number;
+    ativo: boolean;
+  }>): Promise<{ message: string }> {
+    return request<{ message: string }>(`/api/achievements/${id}?callerId=${callerId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteConquista(id: number, callerId: number): Promise<{ message: string }> {
+    return request<{ message: string }>(`/api/achievements/${id}?callerId=${callerId}`, {
+      method: "DELETE",
+    });
   },
 };

@@ -1,9 +1,24 @@
 import * as React from "react";
-import { Bell, Moon, Smartphone, LogOut, Shield, Trash2, Image as ImageIcon } from "lucide-react";
+import { Bell, Moon, Smartphone, LogOut, Shield, Trash2, Image as ImageIcon, Award, Users } from "lucide-react";
 import { sendNativeMessage } from "../../services/nativeBridge";
 import { apiService } from "../../services/apiService";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 import { AdminUsersModal } from "./AdminUsersModal";
+import { AchievementsModal } from "./AchievementsModal";
+import { restartBreathingSchedule } from "../../services/notificationScheduler";
+
+const BREATHING_INTERVAL_OPTIONS = [
+  { value: 30, label: "A cada 30 min" },
+  { value: 60, label: "A cada 1 hora" },
+  { value: 120, label: "A cada 2 horas" },
+  { value: 180, label: "A cada 3 horas" },
+  { value: 240, label: "A cada 4 horas" },
+];
+
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => {
+  const value = `${String(h).padStart(2, "0")}:00`;
+  return { value, label: value };
+});
 
 const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean; onChange: (val: boolean) => void }) => (
   <button
@@ -122,8 +137,18 @@ export function ProfileScreen({
   const [breathingReminders, setBreathingReminders] = React.useState(() => {
     return localStorage.getItem("pref_breathing") !== "false";
   });
+  const [breathingIntervalMin, setBreathingIntervalMin] = React.useState(() => {
+    const v = localStorage.getItem("pref_breathing_interval");
+    return v ? parseInt(v, 10) : 120;
+  });
   const [nightMode, setNightMode] = React.useState(() => {
     return localStorage.getItem("pref_nightmode") === "true";
+  });
+  const [nightModeStart, setNightModeStart] = React.useState(() => {
+    return localStorage.getItem("pref_nightmode_start") || "22:00";
+  });
+  const [nightModeEnd, setNightModeEnd] = React.useState(() => {
+    return localStorage.getItem("pref_nightmode_end") || "07:00";
   });
   const [screenTimeLimit, setScreenTimeLimit] = React.useState(() => {
     return localStorage.getItem("pref_screenlimit") !== "false";
@@ -132,15 +157,51 @@ export function ProfileScreen({
     const v = localStorage.getItem("pref_dailylimit");
     return v ? parseInt(v, 10) : 5;
   });
+  const [prioritizeFollowing, setPrioritizeFollowing] = React.useState(() => {
+    return localStorage.getItem("pref_feed_following_first") !== "false";
+  });
+  const [isAchievementsOpen, setIsAchievementsOpen] = React.useState(false);
 
   const handleToggleBreathing = (val: boolean) => {
     setBreathingReminders(val);
     localStorage.setItem("pref_breathing", String(val));
+    restartBreathingSchedule();
   };
 
-  const handleToggleNightMode = (val: boolean) => {
+  const handleChangeBreathingInterval = (val: number) => {
+    setBreathingIntervalMin(val);
+    localStorage.setItem("pref_breathing_interval", String(val));
+    restartBreathingSchedule();
+  };
+
+  const handleToggleNightMode = async (val: boolean) => {
     setNightMode(val);
     localStorage.setItem("pref_nightmode", String(val));
+
+    // Ativa/desativa o "Não Perturbar" do sistema (somente Android, requer permissão especial
+    // concedida manualmente pelo usuário; em outras plataformas é apenas uma preferência local).
+    try {
+      if (val) {
+        const hasAccess = await sendNativeMessage<boolean>("CHECK_DND_ACCESS");
+        if (!hasAccess) {
+          await sendNativeMessage("REQUEST_DND_ACCESS");
+          return; // usuário precisa conceder o acesso e ligar novamente
+        }
+      }
+      await sendNativeMessage("SET_DND_MODE", { enabled: val });
+    } catch {
+      // Fora do app nativo (web) ou recurso indisponível na plataforma
+    }
+  };
+
+  const handleChangeNightModeStart = (val: string) => {
+    setNightModeStart(val);
+    localStorage.setItem("pref_nightmode_start", val);
+  };
+
+  const handleChangeNightModeEnd = (val: string) => {
+    setNightModeEnd(val);
+    localStorage.setItem("pref_nightmode_end", val);
   };
 
   const handleToggleScreenLimit = (val: boolean) => {
@@ -153,9 +214,39 @@ export function ProfileScreen({
     localStorage.setItem("pref_dailylimit", String(val));
   };
 
+  const handleTogglePrioritizeFollowing = (val: boolean) => {
+    setPrioritizeFollowing(val);
+    localStorage.setItem("pref_feed_following_first", String(val));
+    window.dispatchEvent(new CustomEvent("feed_preference_updated"));
+  };
+
   const [isAdminUsersOpen, setIsAdminUsersOpen] = React.useState(false);
   const [myPosts, setMyPosts] = React.useState<any[]>([]);
   const [loadingPosts, setLoadingPosts] = React.useState(false);
+  const [wellness, setWellness] = React.useState<{
+    pomodoroMinutosSemana: number;
+    atividadesSemana: number;
+    sequenciaDias: number;
+    bemEstarScore: number;
+  } | null>(null);
+  const [screenTimeMinutesToday, setScreenTimeMinutesToday] = React.useState<number | null>(null);
+
+  const loadWellness = React.useCallback(async (userId: number) => {
+    if (!userId) return;
+    try {
+      const summary = await apiService.getWellnessSummary(userId);
+      setWellness(summary);
+    } catch (err) {
+      console.warn("Erro ao carregar relatório de bem-estar:", err);
+    }
+
+    try {
+      const minutos = await sendNativeMessage<number>("GET_SCREEN_TIME_TODAY");
+      if (typeof minutos === "number") setScreenTimeMinutesToday(minutos);
+    } catch {
+      // Indisponível fora do app nativo (ou sem permissão de acesso a uso concedida)
+    }
+  }, []);
 
   const loadMyPosts = React.useCallback(async (userId: number) => {
     if (!userId) return;
@@ -180,13 +271,19 @@ export function ProfileScreen({
         if (stored && isMounted) {
           const parsed = JSON.parse(stored);
           setCurrentUser(parsed);
-          if (parsed?.id) loadMyPosts(parsed.id);
+          if (parsed?.id) {
+            loadMyPosts(parsed.id);
+            loadWellness(parsed.id);
+          }
         }
 
         const u = await sendNativeMessage<any>("GET_CURRENT_USER");
         if (isMounted && u) {
           setCurrentUser(u);
-          if (u?.id) loadMyPosts(u.id);
+          if (u?.id) {
+            loadMyPosts(u.id);
+            loadWellness(u.id);
+          }
         }
       } catch (err) {
         console.warn("Erro ao carregar usuário em ProfileScreen:", err);
@@ -210,7 +307,7 @@ export function ProfileScreen({
       isMounted = false;
       window.removeEventListener("user_profile_updated", handleUpdate);
     };
-  }, [loadMyPosts]);
+  }, [loadMyPosts, loadWellness]);
 
   const handleDeleteMyPost = async (postId: number) => {
     if (!window.confirm("Deseja realmente apagar esta publicação?")) return;
@@ -292,21 +389,34 @@ export function ProfileScreen({
                 <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500, margin: 0 }}>Tela Hoje</p>
                 <span style={{ fontSize: 10, color: "#D68C70", fontWeight: 600 }}>Meta: {dailyLimit}h</span>
               </div>
-              <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: "#D68C70", fontWeight: 400, marginTop: 4, margin: 0 }}>
-                3h 20m
-              </p>
-              <div style={{ marginTop: 6, height: 4, borderRadius: 2, background: "#EDE7DA", overflow: "hidden" }}>
-                <div style={{
-                  height: "100%",
-                  width: `${Math.min(100, Math.round((3.33 / dailyLimit) * 100))}%`,
-                  background: (3.33 / dailyLimit) > 0.9 ? "#E06D53" : "#6B8F6D",
-                  borderRadius: 2,
-                  transition: "width 0.3s ease",
-                }} />
-              </div>
-              <p style={{ fontSize: 10, color: (3.33 / dailyLimit) > 0.9 ? "#C44F35" : "#6B8F6D", fontWeight: 500, marginTop: 4, margin: "4px 0 0 0" }}>
-                {Math.round((3.33 / dailyLimit) * 100)}% do limite diário
-              </p>
+              {screenTimeMinutesToday === null ? (
+                <>
+                  <p style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: "#7A8A7B", fontWeight: 400, marginTop: 4, margin: 0 }}>
+                    Indisponível
+                  </p>
+                  <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 4 }}>
+                    Disponível no app Android com acesso de uso liberado
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: "#D68C70", fontWeight: 400, marginTop: 4, margin: 0 }}>
+                    {Math.floor(screenTimeMinutesToday / 60)}h {screenTimeMinutesToday % 60}m
+                  </p>
+                  <div style={{ marginTop: 6, height: 4, borderRadius: 2, background: "#EDE7DA", overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%",
+                      width: `${Math.min(100, Math.round((screenTimeMinutesToday / 60 / dailyLimit) * 100))}%`,
+                      background: (screenTimeMinutesToday / 60 / dailyLimit) > 0.9 ? "#E06D53" : "#6B8F6D",
+                      borderRadius: 2,
+                      transition: "width 0.3s ease",
+                    }} />
+                  </div>
+                  <p style={{ fontSize: 10, color: (screenTimeMinutesToday / 60 / dailyLimit) > 0.9 ? "#C44F35" : "#6B8F6D", fontWeight: 500, marginTop: 4, margin: "4px 0 0 0" }}>
+                    {Math.round((screenTimeMinutesToday / 60 / dailyLimit) * 100)}% do limite diário
+                  </p>
+                </>
+              )}
             </div>
 
             <div style={{
@@ -317,7 +427,7 @@ export function ProfileScreen({
             }}>
               <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500 }}>Atividades</p>
               <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: "#6B8F6D", fontWeight: 400, marginTop: 4 }}>
-                12
+                {wellness ? wellness.atividadesSemana : "—"}
               </p>
               <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 4 }}>esta semana</p>
             </div>
@@ -330,7 +440,7 @@ export function ProfileScreen({
             }}>
               <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500 }}>Sequência</p>
               <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: "#C4A882", fontWeight: 400, marginTop: 4 }}>
-                7 dias
+                {wellness ? `${wellness.sequenciaDias} ${wellness.sequenciaDias === 1 ? "dia" : "dias"}` : "—"}
               </p>
               <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 4 }}>consecutivos</p>
             </div>
@@ -343,7 +453,7 @@ export function ProfileScreen({
             }}>
               <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500 }}>Bem-estar</p>
               <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: "#7A8A7B", fontWeight: 400, marginTop: 4 }}>
-                85%
+                {wellness ? `${wellness.bemEstarScore}%` : "—"}
               </p>
               <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 4 }}>pontuação</p>
             </div>
@@ -430,6 +540,30 @@ export function ProfileScreen({
             }}
           >
             🪪 Ver Carteirinha
+          </button>
+          <button
+            onClick={() => setIsAchievementsOpen(true)}
+            style={{
+              gridColumn: "1 / -1",
+              background: "linear-gradient(135deg, #2D3A2E 0%, #3D5040 100%)",
+              border: "none",
+              borderRadius: 12,
+              padding: "14px 16px",
+              color: "#FDFBF7",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+              boxShadow: "0 4px 12px rgba(45,58,46,0.2)",
+              transition: "all 0.2s",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <Award size={16} />
+            Conquistas
           </button>
         </div>
 
@@ -570,6 +704,35 @@ export function ProfileScreen({
           </h2>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Prioritize Following in Feed */}
+            <div style={{
+              background: "#F5EFE3",
+              borderRadius: 14,
+              padding: "14px 16px",
+              border: "1px solid rgba(45,58,46,0.08)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: "rgba(196,168,130,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    <Users size={18} color="#C4A882" />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E" }}>Priorizar Quem Você Segue</p>
+                    <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>Mostrar primeiro no Feed</p>
+                  </div>
+                </div>
+                <ToggleSwitch enabled={prioritizeFollowing} onChange={handleTogglePrioritizeFollowing} />
+              </div>
+            </div>
+
             {/* Breathing Reminders */}
             <div style={{
               background: "#F5EFE3",
@@ -577,7 +740,7 @@ export function ProfileScreen({
               padding: "14px 16px",
               border: "1px solid rgba(45,58,46,0.08)",
             }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: breathingReminders ? 10 : 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{
                     width: 36,
@@ -592,11 +755,34 @@ export function ProfileScreen({
                   </div>
                   <div>
                     <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E" }}>Lembretes de Respiro</p>
-                    <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>A cada 2 horas</p>
+                    <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>
+                      {BREATHING_INTERVAL_OPTIONS.find((o) => o.value === breathingIntervalMin)?.label || "A cada 2 horas"}
+                    </p>
                   </div>
                 </div>
                 <ToggleSwitch enabled={breathingReminders} onChange={handleToggleBreathing} />
               </div>
+              {breathingReminders && (
+                <select
+                  value={breathingIntervalMin}
+                  onChange={(e) => handleChangeBreathingInterval(parseInt(e.target.value, 10))}
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(45,58,46,0.12)",
+                    background: "#FAF7F0",
+                    fontSize: 12,
+                    color: "#2D3A2E",
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                  aria-label="Frequência dos lembretes de respiro"
+                >
+                  {BREATHING_INTERVAL_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Night Mode */}
@@ -606,7 +792,7 @@ export function ProfileScreen({
               padding: "14px 16px",
               border: "1px solid rgba(45,58,46,0.08)",
             }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: nightMode ? 10 : 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{
                     width: 36,
@@ -621,11 +807,32 @@ export function ProfileScreen({
                   </div>
                   <div>
                     <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E" }}>Modo Noturno Digital</p>
-                    <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>22h - 7h</p>
+                    <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>{nightModeStart} - {nightModeEnd}</p>
                   </div>
                 </div>
                 <ToggleSwitch enabled={nightMode} onChange={handleToggleNightMode} />
               </div>
+              {nightMode && (
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <select
+                    value={nightModeStart}
+                    onChange={(e) => handleChangeNightModeStart(e.target.value)}
+                    style={{ flex: 1, padding: "8px 10px", borderRadius: 10, border: "1px solid rgba(45,58,46,0.12)", background: "#FAF7F0", fontSize: 12, color: "#2D3A2E", fontFamily: "'DM Sans', sans-serif" }}
+                    aria-label="Horário de início do modo noturno"
+                  >
+                    {HOUR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <span style={{ fontSize: 11, color: "#7A8A7B" }}>até</span>
+                  <select
+                    value={nightModeEnd}
+                    onChange={(e) => handleChangeNightModeEnd(e.target.value)}
+                    style={{ flex: 1, padding: "8px 10px", borderRadius: 10, border: "1px solid rgba(45,58,46,0.12)", background: "#FAF7F0", fontSize: 12, color: "#2D3A2E", fontFamily: "'DM Sans', sans-serif" }}
+                    aria-label="Horário de término do modo noturno"
+                  >
+                    {HOUR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Screen Time Limit */}
@@ -722,6 +929,13 @@ export function ProfileScreen({
           callerId={currentUser?.id || 1}
         />
       )}
+
+      <AchievementsModal
+        isOpen={isAchievementsOpen}
+        onClose={() => setIsAchievementsOpen(false)}
+        usuarioId={currentUser?.id || 1}
+        isAdmin={!!currentUser?.isAdmin}
+      />
     </div>
   );
 }

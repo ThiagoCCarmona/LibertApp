@@ -10,7 +10,7 @@ public class Usuario
     public string CPF { get; set; } = string.Empty;
     public string Curso { get; set; } = string.Empty;
     public string Bio { get; set; } = string.Empty;
-    public string Localizacao { get; set; } = "Comunidade Carmelita";
+    public string Localizacao { get; set; } = string.Empty;
     public string NumeroCarteira { get; set; } = string.Empty;
     public string DataNascimento { get; set; } = string.Empty;
     public string FotoUrl { get; set; } = string.Empty;

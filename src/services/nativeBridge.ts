@@ -27,10 +27,12 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * Verifica se a aplicacao esta rodando dentro da casca .NET MAUI
+ * Verifica se a aplicacao esta rodando dentro da casca .NET MAUI.
+ * A WebView nativa injeta esse marcador (ver MainPage.xaml.cs) assim que a pagina termina
+ * de carregar, mesmo consumindo o site de producao (nao um bundle local empacotado).
  */
 export function isMauiHybrid(): boolean {
-  return typeof window !== 'undefined' && !!(window as any).HybridWebView;
+  return typeof window !== 'undefined' && !!(window as any).__LIBERTAPP_NATIVE_BRIDGE;
 }
 
 // Fallback de desenvolvimento e execução no navegador comum (Web / Vite)
@@ -73,7 +75,7 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
         nivel: 1,
         telefone: telefone || "",
         cpf: "",
-        localizacao: "Comunidade Carmelita",
+        localizacao: "",
         fotoUrl: fotoUrl || DEFAULT_AVATAR_URL,
         bio: bio || "Comprometido(a) com a saúde mental e momentos de foco.",
         numeroCarteira: `LBT-2026-${1000 + (users.length + 1)}`,
@@ -343,7 +345,11 @@ export async function sendNativeMessage<T = any>(action: string, payload?: any):
       });
 
       try {
-        (window as any).HybridWebView.SendRawMessage(message);
+        const nativeSend = (window as any).__LIBERTAPP_NATIVE_BRIDGE_SEND;
+        if (typeof nativeSend !== 'function') {
+          throw new Error('Ponte nativa indisponível');
+        }
+        nativeSend(message);
       } catch (err) {
         pendingCallbacks.delete(callbackId);
         reject(err);

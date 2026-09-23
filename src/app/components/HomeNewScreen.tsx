@@ -71,10 +71,11 @@ export function HomeNewScreen({
         }
 
         const callerId = user?.id || 1;
+        const priorizarSeguindo = localStorage.getItem("pref_feed_following_first") !== "false";
 
         // 1. Tenta buscar da API REST central na VPS
         try {
-          const apiFeed = await apiService.getFeed(callerId);
+          const apiFeed = await apiService.getFeed(callerId, priorizarSeguindo);
           if (isMounted) {
             setPosts(apiFeed || []);
             setIsLoading(false);
@@ -99,9 +100,11 @@ export function HomeNewScreen({
     }
 
     loadData();
+    window.addEventListener("feed_preference_updated", loadData);
 
     return () => {
       isMounted = false;
+      window.removeEventListener("feed_preference_updated", loadData);
     };
   }, [currentUser?.id]);
 
@@ -519,9 +522,28 @@ export function HomeNewScreen({
                         />
                       </div>
                       <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>
-                          {post.icon || "🌱"} {post.author}
-                        </p>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>
+                            {post.icon || "🌱"} {post.author}
+                          </p>
+                          {post.seguindo && (
+                            <span
+                              style={{
+                                fontSize: 9,
+                                fontWeight: 700,
+                                color: "#6B8F6D",
+                                background: "rgba(107,143,109,0.15)",
+                                border: "1px solid rgba(107,143,109,0.3)",
+                                borderRadius: 8,
+                                padding: "2px 6px",
+                                letterSpacing: "0.02em",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              SEGUINDO
+                            </span>
+                          )}
+                        </div>
                         <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>
                           {post.curso ? `${post.curso} • ` : ""}{post.time}
                         </p>
