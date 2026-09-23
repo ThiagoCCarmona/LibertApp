@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Send, Bot, RotateCcw, Sparkles } from "lucide-react";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 
 interface ChatMessage {
   id: string;
@@ -390,11 +391,10 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
                       : "0 2px 6px rgba(45, 58, 46, 0.04)",
                     fontSize: 13.5,
                     lineHeight: 1.55,
-                    whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
                   }}
                 >
-                  {m.text}
+                  <MarkdownRenderer content={m.text} isUser={isUser} />
                 </div>
                 <span
                   style={{
