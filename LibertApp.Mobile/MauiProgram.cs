@@ -31,12 +31,14 @@ public static class MauiProgram
 		builder.Services.AddTransient<MainPage>();
 
 #if ANDROID
-		// A WebView do Android nao abre o seletor de arquivos para <input type="file">
-		// (usado para importar foto de perfil e de publicacoes) sem um WebChromeClient
-		// customizado. Veja Platforms/Android/FileChooserWebChromeClient.cs.
+		// A WebView do Android precisa de WebChromeClient customizado para <input type="file">
+		// e para solicitar/autorizar permissoes de geolocalizacao (OnGeolocationPermissionsShowPrompt).
+		// Veja Platforms/Android/FileChooserWebChromeClient.cs.
 		Microsoft.Maui.Handlers.WebViewHandler.Mapper.AppendToMapping("FileChooserSupport", (handler, view) =>
 		{
 			handler.PlatformView.SetWebChromeClient(new FileChooserWebChromeClient());
+			handler.PlatformView.Settings.SetGeolocationEnabled(true);
+			handler.PlatformView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
 		});
 #endif
 

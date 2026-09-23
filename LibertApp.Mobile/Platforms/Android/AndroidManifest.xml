@@ -4,9 +4,15 @@
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.INTERNET" />
 
-	<!-- Necessárias para importar fotos (perfil e publicações) via seletor de imagens do Android -->
+	<!-- Necessárias para fotos (perfil e publicações) via galeria e câmera -->
+	<uses-permission android:name="android.permission.CAMERA" />
+	<uses-feature android:name="android.hardware.camera" android:required="false" />
 	<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
+	<!-- Necessárias para geolocalização e preenchimento de localização -->
+	<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+	<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
 	<!-- Necessárias para o relatório de tempo de tela (acesso de uso) e o modo noturno digital (política de notificações/DND) -->
 	<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />

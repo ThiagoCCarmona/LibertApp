@@ -38,8 +38,22 @@ function isWithinNightMode(): boolean {
 }
 
 function notify(title: string, message: string) {
-  if (!isMauiHybrid()) return;
-  sendNativeMessage("SHOW_LOCAL_NOTIFICATION", { title, message }).catch(() => {});
+  if (isMauiHybrid()) {
+    sendNativeMessage("SHOW_LOCAL_NOTIFICATION", { title, message }).catch(() => {});
+  } else {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("libertapp_inapp_notification", {
+          detail: { title, message },
+        })
+      );
+      if ("Notification" in window && Notification.permission === "granted") {
+        try {
+          new Notification(title, { body: message });
+        } catch {}
+      }
+    }
+  }
 }
 
 function scheduleBreathingReminders() {
@@ -133,7 +147,14 @@ function scheduleProfileIncentive(usuarioId: number) {
 
 /** Deve ser chamado uma vez quando o usuário loga/abre o app principal. Retorna uma função de limpeza. */
 export function startNotificationScheduler(usuarioId: number): () => void {
-  if (!isMauiHybrid() || !usuarioId) return () => {};
+  if (!usuarioId) return () => {};
+
+  // Solicita permissão de notificação no início
+  if (isMauiHybrid()) {
+    sendNativeMessage("REQUEST_NOTIFICATION_PERMISSION").catch(() => {});
+  } else if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission().catch(() => {});
+  }
 
   scheduleBreathingReminders();
 

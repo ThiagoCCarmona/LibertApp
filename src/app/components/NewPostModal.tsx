@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { X, Image as ImageIcon, Sparkles, Trash2, Upload } from "lucide-react";
+import { isMauiHybrid, pickNativeImage } from "../../services/nativeBridge";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
 interface NewPostModalProps {
@@ -85,6 +86,21 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
       setIsCompressing(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  const handleSelectPhoto = async () => {
+    if (isMauiHybrid()) {
+      try {
+        const nativePhoto = await pickNativeImage(false);
+        if (nativePhoto?.dataUrl) {
+          setImagePreview(nativePhoto.dataUrl);
+          return;
+        }
+      } catch (err) {
+        console.warn("Seleção nativa de imagem:", err);
+      }
+    }
+    fileInputRef.current?.click();
   };
 
   const handlePublish = () => {
@@ -353,7 +369,7 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
           }}
         >
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleSelectPhoto}
             style={{
               background: imagePreview ? "#E8D7C8" : "#F5EFE3",
               border: "1px solid rgba(45, 58, 46, 0.12)",

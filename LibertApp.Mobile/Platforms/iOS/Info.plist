@@ -28,5 +28,11 @@
 	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>O LibertApp utiliza sua localização para preencher sua cidade e estado no perfil.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>O LibertApp precisa de acesso à câmera para você tirar fotos de perfil e publicações.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>O LibertApp precisa de acesso à sua galeria para você selecionar fotos para o perfil e publicações.</string>
 </dict>
 </plist>

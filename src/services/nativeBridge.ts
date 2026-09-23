@@ -36,7 +36,7 @@ export function isMauiHybrid(): boolean {
 }
 
 // Fallback de desenvolvimento e execução no navegador comum (Web / Vite)
-function handleWebFallback<T = any>(action: string, payload?: any): T | null {
+async function handleWebFallback<T = any>(action: string, payload?: any): Promise<T | null> {
   console.log(`[NativeBridge WebFallback] Executing Action: ${action}`, payload);
 
   const parsedPayload = typeof payload === "string" ? JSON.parse(payload || "{}") : (payload ?? {});
@@ -316,6 +316,99 @@ function handleWebFallback<T = any>(action: string, payload?: any): T | null {
       return null;
     }
 
+    case "CHECK_USAGE_ACCESS": {
+      return true as T;
+    }
+
+    case "REQUEST_USAGE_ACCESS": {
+      console.log("[NativeBridge Web] REQUEST_USAGE_ACCESS chamado.");
+      return { opened: true } as T;
+    }
+
+    case "GET_SCREEN_TIME_TODAY": {
+      const stored = localStorage.getItem("libertapp_simulated_screen_time");
+      const minutes = stored ? parseInt(stored, 10) : 145; // 2h 25m padrão de exemplo na Web
+      return minutes as T;
+    }
+
+    case "CHECK_DND_ACCESS": {
+      return true as T;
+    }
+
+    case "REQUEST_DND_ACCESS": {
+      return { opened: true } as T;
+    }
+
+    case "SET_DND_MODE": {
+      localStorage.setItem("libertapp_dnd", String(parsedPayload?.enabled));
+      return { applied: true, enabled: !!parsedPayload?.enabled } as T;
+    }
+
+    case "CHECK_NOTIFICATION_PERMISSION": {
+      const granted = typeof window !== "undefined" && "Notification" in window
+        ? Notification.permission === "granted"
+        : true;
+      return { granted } as T;
+    }
+
+    case "REQUEST_NOTIFICATION_PERMISSION": {
+      if (typeof window !== "undefined" && "Notification" in window) {
+        try {
+          const res = await Notification.requestPermission();
+          return { granted: res === "granted" } as T;
+        } catch {
+          return { granted: false } as T;
+        }
+      }
+      return { granted: true } as T;
+    }
+
+    case "SHOW_LOCAL_NOTIFICATION": {
+      const { title, message } = parsedPayload || {};
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("libertapp_inapp_notification", {
+            detail: { title, message },
+          })
+        );
+        if ("Notification" in window && Notification.permission === "granted") {
+          try {
+            new Notification(title || "LibertApp", { body: message });
+          } catch {}
+        }
+      }
+      return { shown: true } as T;
+    }
+
+    case "CHECK_LOCATION_PERMISSION":
+    case "REQUEST_LOCATION_PERMISSION": {
+      return { granted: true } as T;
+    }
+
+    case "GET_CURRENT_LOCATION": {
+      return new Promise((resolve, reject) => {
+        if (typeof navigator === "undefined" || !navigator.geolocation) {
+          reject(new Error("Geolocalização não suportada."));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude } as T),
+          (err) => reject(new Error(err.message || "Erro de geolocalização")),
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+        );
+      });
+    }
+
+    case "CHECK_MEDIA_PERMISSION":
+    case "REQUEST_MEDIA_PERMISSION": {
+      return { granted: true } as T;
+    }
+
+    case "PICK_IMAGE":
+    case "CAPTURE_PHOTO": {
+      return null;
+    }
+
     default:
       return null;
   }
@@ -359,4 +452,113 @@ export async function sendNativeMessage<T = any>(action: string, payload?: any):
 
   // Fallback transparente para o navegador Web
   return handleWebFallback<T>(action, payload);
+}
+
+// ---------------------------------------------------------
+// Helpers de Integração Nativa (Notificações, Tela, Mídia, GPS)
+// ---------------------------------------------------------
+
+export async function checkNotificationPermission(): Promise<boolean> {
+  try {
+    const res = await sendNativeMessage<{ granted: boolean }>("CHECK_NOTIFICATION_PERMISSION");
+    return !!res?.granted;
+  } catch {
+    return false;
+  }
+}
+
+export async function requestNotificationPermission(): Promise<boolean> {
+  try {
+    const res = await sendNativeMessage<{ granted: boolean }>("REQUEST_NOTIFICATION_PERMISSION");
+    return !!res?.granted;
+  } catch {
+    return false;
+  }
+}
+
+export async function showLocalNotification(title: string, message: string): Promise<boolean> {
+  try {
+    const res = await sendNativeMessage<{ shown: boolean }>("SHOW_LOCAL_NOTIFICATION", { title, message });
+    return !!res?.shown;
+  } catch {
+    return false;
+  }
+}
+
+export async function checkUsageAccess(): Promise<boolean> {
+  try {
+    const res = await sendNativeMessage<boolean>("CHECK_USAGE_ACCESS");
+    return !!res;
+  } catch {
+    return false;
+  }
+}
+
+export async function requestUsageAccess(): Promise<void> {
+  try {
+    await sendNativeMessage("REQUEST_USAGE_ACCESS");
+  } catch {}
+}
+
+export async function getScreenTimeToday(): Promise<number | null> {
+  try {
+    const res = await sendNativeMessage<number>("GET_SCREEN_TIME_TODAY");
+    return typeof res === "number" ? res : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function checkLocationPermission(): Promise<boolean> {
+  try {
+    const res = await sendNativeMessage<{ granted: boolean }>("CHECK_LOCATION_PERMISSION");
+    return !!res?.granted;
+  } catch {
+    return false;
+  }
+}
+
+export async function requestLocationPermission(): Promise<boolean> {
+  try {
+    const res = await sendNativeMessage<{ granted: boolean }>("REQUEST_LOCATION_PERMISSION");
+    return !!res?.granted;
+  } catch {
+    return false;
+  }
+}
+
+export async function getCurrentLocation(): Promise<{ latitude: number; longitude: number }> {
+  const res = await sendNativeMessage<{ latitude: number; longitude: number }>("GET_CURRENT_LOCATION");
+  if (!res || typeof res.latitude !== "number") {
+    throw new Error("Não foi possível obter coordenadas de localização.");
+  }
+  return res;
+}
+
+export async function checkMediaPermission(): Promise<boolean> {
+  try {
+    const res = await sendNativeMessage<{ granted: boolean }>("CHECK_MEDIA_PERMISSION");
+    return !!res?.granted;
+  } catch {
+    return false;
+  }
+}
+
+export async function requestMediaPermission(camera: boolean = false): Promise<boolean> {
+  try {
+    const res = await sendNativeMessage<{ granted: boolean }>("REQUEST_MEDIA_PERMISSION", { camera });
+    return !!res?.granted;
+  } catch {
+    return false;
+  }
+}
+
+export async function pickNativeImage(fromCamera: boolean = false): Promise<{ dataUrl: string; fileName: string } | null> {
+  try {
+    const action = fromCamera ? "CAPTURE_PHOTO" : "PICK_IMAGE";
+    const res = await sendNativeMessage<{ dataUrl: string; fileName: string }>(action);
+    return res || null;
+  } catch {
+    return null;
+  }
 }

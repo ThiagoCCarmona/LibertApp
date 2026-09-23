@@ -1,6 +1,18 @@
 import * as React from "react";
-import { Bell, Moon, Smartphone, LogOut, Shield, Trash2, Image as ImageIcon, Award, Users } from "lucide-react";
-import { sendNativeMessage } from "../../services/nativeBridge";
+import { Bell, Moon, Smartphone, LogOut, Shield, Trash2, Image as ImageIcon, Award, Users, MapPin, Camera, CheckCircle2, AlertCircle, ExternalLink, RefreshCw } from "lucide-react";
+import {
+  sendNativeMessage,
+  isMauiHybrid,
+  checkUsageAccess,
+  requestUsageAccess,
+  checkNotificationPermission,
+  requestNotificationPermission,
+  showLocalNotification,
+  checkLocationPermission,
+  requestLocationPermission,
+  checkMediaPermission,
+  requestMediaPermission,
+} from "../../services/nativeBridge";
 import { apiService } from "../../services/apiService";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 import { AdminUsersModal } from "./AdminUsersModal";
@@ -162,9 +174,82 @@ export function ProfileScreen({
   });
   const [isAchievementsOpen, setIsAchievementsOpen] = React.useState(false);
 
-  const handleToggleBreathing = (val: boolean) => {
+  const [hasUsageAccess, setHasUsageAccess] = React.useState<boolean | null>(null);
+  const [hasNotificationPermission, setHasNotificationPermission] = React.useState<boolean | null>(null);
+  const [hasLocationPermission, setHasLocationPermission] = React.useState<boolean | null>(null);
+  const [hasMediaPermission, setHasMediaPermission] = React.useState<boolean | null>(null);
+  const [isTestingNotification, setIsTestingNotification] = React.useState(false);
+
+  const checkPermissions = React.useCallback(async () => {
+    try {
+      const usage = await checkUsageAccess();
+      setHasUsageAccess(usage);
+    } catch {}
+
+    try {
+      const notif = await checkNotificationPermission();
+      setHasNotificationPermission(notif);
+    } catch {}
+
+    try {
+      const loc = await checkLocationPermission();
+      setHasLocationPermission(loc);
+    } catch {}
+
+    try {
+      const media = await checkMediaPermission();
+      setHasMediaPermission(media);
+    } catch {}
+  }, []);
+
+  const handleRequestUsageAccess = async () => {
+    await requestUsageAccess();
+    setTimeout(() => {
+      checkPermissions();
+      const stored = localStorage.getItem("currentUser");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed?.id) loadWellness(parsed.id);
+        } catch {}
+      }
+    }, 2000);
+  };
+
+  const handleRequestNotificationPermission = async () => {
+    const granted = await requestNotificationPermission();
+    setHasNotificationPermission(granted);
+    if (granted) {
+      await showLocalNotification("Notificações Ativadas 🌿", "Lembretes e avisos do LibertApp estão prontos!");
+    }
+  };
+
+  const handleTestNotification = async () => {
+    setIsTestingNotification(true);
+    try {
+      await showLocalNotification("Teste do LibertApp 🌿", "Sua notificação de teste foi enviada com sucesso!");
+    } finally {
+      setTimeout(() => setIsTestingNotification(false), 800);
+    }
+  };
+
+  const handleRequestLocationPermission = async () => {
+    const granted = await requestLocationPermission();
+    setHasLocationPermission(granted);
+  };
+
+  const handleRequestMediaPermission = async () => {
+    const granted = await requestMediaPermission(false);
+    setHasMediaPermission(granted);
+  };
+
+  const handleToggleBreathing = async (val: boolean) => {
     setBreathingReminders(val);
     localStorage.setItem("pref_breathing", String(val));
+    if (val) {
+      const granted = await requestNotificationPermission();
+      setHasNotificationPermission(granted);
+    }
     restartBreathingSchedule();
   };
 
@@ -178,14 +263,13 @@ export function ProfileScreen({
     setNightMode(val);
     localStorage.setItem("pref_nightmode", String(val));
 
-    // Ativa/desativa o "Não Perturbar" do sistema (somente Android, requer permissão especial
-    // concedida manualmente pelo usuário; em outras plataformas é apenas uma preferência local).
+    // Ativa/desativa o "Não Perturbar" do sistema (somente Android, requer permissão especial)
     try {
       if (val) {
         const hasAccess = await sendNativeMessage<boolean>("CHECK_DND_ACCESS");
         if (!hasAccess) {
           await sendNativeMessage("REQUEST_DND_ACCESS");
-          return; // usuário precisa conceder o acesso e ligar novamente
+          return;
         }
       }
       await sendNativeMessage("SET_DND_MODE", { enabled: val });
@@ -204,9 +288,17 @@ export function ProfileScreen({
     localStorage.setItem("pref_nightmode_end", val);
   };
 
-  const handleToggleScreenLimit = (val: boolean) => {
+  const handleToggleScreenLimit = async (val: boolean) => {
     setScreenTimeLimit(val);
     localStorage.setItem("pref_screenlimit", String(val));
+    if (val && hasUsageAccess === false && isMauiHybrid()) {
+      const confirmAccess = window.confirm(
+        "Para monitorar o limite de tempo de tela e alertá-lo, o LibertApp precisa de acesso de uso no Android. Deseja abrir as configurações agora?"
+      );
+      if (confirmAccess) {
+        await handleRequestUsageAccess();
+      }
+    }
   };
 
   const handleChangeDailyLimit = (val: number) => {
@@ -242,7 +334,13 @@ export function ProfileScreen({
 
     try {
       const minutos = await sendNativeMessage<number>("GET_SCREEN_TIME_TODAY");
-      if (typeof minutos === "number") setScreenTimeMinutesToday(minutos);
+      if (typeof minutos === "number") {
+        setScreenTimeMinutesToday(minutos);
+        setHasUsageAccess(true);
+      } else {
+        const usage = await checkUsageAccess();
+        setHasUsageAccess(usage);
+      }
     } catch {
       // Indisponível fora do app nativo (ou sem permissão de acesso a uso concedida)
     }
@@ -390,14 +488,38 @@ export function ProfileScreen({
                 <span style={{ fontSize: 10, color: "#D68C70", fontWeight: 600 }}>Meta: {dailyLimit}h</span>
               </div>
               {screenTimeMinutesToday === null ? (
-                <>
-                  <p style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: "#7A8A7B", fontWeight: 400, marginTop: 4, margin: 0 }}>
-                    Indisponível
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+                  <p style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: "#7A8A7B", fontWeight: 400, margin: 0 }}>
+                    {hasUsageAccess ? "Sem dados" : "Acesso de Uso"}
                   </p>
-                  <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 4 }}>
-                    Disponível no app Android com acesso de uso liberado
+                  <p style={{ fontSize: 9.5, color: "#7A8A7B", margin: 0, lineHeight: 1.25 }}>
+                    {hasUsageAccess
+                      ? "Aguardando sincronização de tela..."
+                      : "Libere o acesso de uso nas configurações para ver horas reais."}
                   </p>
-                </>
+                  {!hasUsageAccess && (
+                    <button
+                      onClick={handleRequestUsageAccess}
+                      style={{
+                        background: "#D68C70",
+                        color: "#FFFFFF",
+                        border: "none",
+                        borderRadius: 8,
+                        padding: "5px 8px",
+                        fontSize: 10,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 4,
+                        marginTop: 4,
+                      }}
+                    >
+                      <ExternalLink size={10} /> Liberar Acesso
+                    </button>
+                  )}
+                </div>
               ) : (
                 <>
                   <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: "#D68C70", fontWeight: 400, marginTop: 4, margin: 0 }}>
@@ -730,6 +852,202 @@ export function ProfileScreen({
                   </div>
                 </div>
                 <ToggleSwitch enabled={prioritizeFollowing} onChange={handleTogglePrioritizeFollowing} />
+              </div>
+            </div>
+
+            {/* Permissões do Dispositivo */}
+            <div style={{
+              background: "#F5EFE3",
+              borderRadius: 14,
+              padding: "16px",
+              border: "1px solid rgba(45,58,46,0.08)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: "rgba(107,143,109,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    <Shield size={18} color="#6B8F6D" />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>Permissões do Dispositivo</p>
+                    <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>Integração nativa com Android / Web</p>
+                  </div>
+                </div>
+                <button
+                  onClick={checkPermissions}
+                  title="Atualizar status"
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#7A8A7B",
+                    padding: 4,
+                  }}
+                >
+                  <RefreshCw size={14} />
+                </button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+                {/* 1. Notificações */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Bell size={15} color="#D68C70" />
+                    <div>
+                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>Notificações</span>
+                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>Lembretes e avisos do app</p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {hasNotificationPermission ? (
+                      <>
+                        <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "#6B8F6D", fontWeight: 600 }}>
+                          <CheckCircle2 size={13} /> Ativo
+                        </span>
+                        <button
+                          onClick={handleTestNotification}
+                          disabled={isTestingNotification}
+                          style={{
+                            background: "#FAF7F0",
+                            border: "1px solid rgba(45,58,46,0.12)",
+                            borderRadius: 6,
+                            padding: "3px 7px",
+                            fontSize: 10,
+                            color: "#2D3A2E",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {isTestingNotification ? "Enviando..." : "Testar"}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleRequestNotificationPermission}
+                        style={{
+                          background: "#D68C70",
+                          color: "#FFFFFF",
+                          border: "none",
+                          borderRadius: 6,
+                          padding: "4px 8px",
+                          fontSize: 10.5,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Autorizar
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Tempo de Tela */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, borderTop: "1px solid rgba(45,58,46,0.06)", paddingTop: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Smartphone size={15} color="#6B8F6D" />
+                    <div>
+                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>Acesso de Uso</span>
+                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>Tempo de tela real no Android</p>
+                    </div>
+                  </div>
+                  <div>
+                    {hasUsageAccess ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "#6B8F6D", fontWeight: 600 }}>
+                        <CheckCircle2 size={13} /> Liberado
+                      </span>
+                    ) : (
+                      <button
+                        onClick={handleRequestUsageAccess}
+                        style={{
+                          background: "#D68C70",
+                          color: "#FFFFFF",
+                          border: "none",
+                          borderRadius: 6,
+                          padding: "4px 8px",
+                          fontSize: 10.5,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Liberar Acesso
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Localização */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, borderTop: "1px solid rgba(45,58,46,0.06)", paddingTop: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <MapPin size={15} color="#D68C70" />
+                    <div>
+                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>Localização GPS</span>
+                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>Cidade no perfil do usuário</p>
+                    </div>
+                  </div>
+                  <div>
+                    {hasLocationPermission ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "#6B8F6D", fontWeight: 600 }}>
+                        <CheckCircle2 size={13} /> Ativo
+                      </span>
+                    ) : (
+                      <button
+                        onClick={handleRequestLocationPermission}
+                        style={{
+                          background: "#D68C70",
+                          color: "#FFFFFF",
+                          border: "none",
+                          borderRadius: 6,
+                          padding: "4px 8px",
+                          fontSize: 10.5,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Autorizar
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Mídia & Câmera */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, borderTop: "1px solid rgba(45,58,46,0.06)", paddingTop: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Camera size={15} color="#6B8F6D" />
+                    <div>
+                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>Câmera & Galeria</span>
+                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>Fotos de perfil e publicações</p>
+                    </div>
+                  </div>
+                  <div>
+                    {hasMediaPermission ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "#6B8F6D", fontWeight: 600 }}>
+                        <CheckCircle2 size={13} /> Liberado
+                      </span>
+                    ) : (
+                      <button
+                        onClick={handleRequestMediaPermission}
+                        style={{
+                          background: "#D68C70",
+                          color: "#FFFFFF",
+                          border: "none",
+                          borderRadius: 6,
+                          padding: "4px 8px",
+                          fontSize: 10.5,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Autorizar
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 

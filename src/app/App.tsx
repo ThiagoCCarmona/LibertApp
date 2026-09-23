@@ -20,6 +20,21 @@ export type Screen = "splash" | "login" | "signup" | "forgot" | "home" | "main" 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("splash");
   const [activeTab, setActiveTab] = useState<Tab>("home");
+  const [inAppToast, setInAppToast] = useState<{ title: string; message: string } | null>(null);
+
+  useEffect(() => {
+    const handleNotification = (e: any) => {
+      const { title, message } = e.detail || {};
+      if (title || message) {
+        setInAppToast({ title: title || "Notificação", message: message || "" });
+        setTimeout(() => {
+          setInAppToast(null);
+        }, 5000);
+      }
+    };
+    window.addEventListener("libertapp_inapp_notification", handleNotification);
+    return () => window.removeEventListener("libertapp_inapp_notification", handleNotification);
+  }, []);
 
   useEffect(() => {
     // Sempre mostrar splash ao abrir (Telas 1 -> 2)
@@ -156,6 +171,69 @@ export default function App() {
         position: "relative",
       }}
     >
+      {inAppToast && (
+        <div
+          onClick={() => setInAppToast(null)}
+          style={{
+            position: "fixed",
+            top: "calc(env(safe-area-inset-top, 0px) + 12px)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "calc(100% - 32px)",
+            maxWidth: 420,
+            background: "#2D3A2E",
+            color: "#FDFBF7",
+            borderRadius: 16,
+            padding: "12px 16px",
+            boxShadow: "0 8px 24px rgba(45, 58, 46, 0.25)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            cursor: "pointer",
+            animation: "fadeIn 0.2s ease-out",
+          }}
+        >
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
+              background: "rgba(214, 140, 112, 0.25)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+              flexShrink: 0,
+            }}
+          >
+            🔔
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#FFFFFF" }}>{inAppToast.title}</p>
+            <p style={{ margin: "2px 0 0 0", fontSize: 11.5, color: "rgba(253, 251, 247, 0.8)", lineHeight: 1.3 }}>
+              {inAppToast.message}
+            </p>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setInAppToast(null);
+            }}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "rgba(253, 251, 247, 0.6)",
+              padding: 4,
+              cursor: "pointer",
+              fontSize: 14,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {currentScreen === "splash" ? (
         <SplashScreen onComplete={handleSplashComplete} />
       ) : (

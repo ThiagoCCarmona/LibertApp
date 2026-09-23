@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { ChevronLeft, Upload, MapPin, Loader2 } from "lucide-react";
-import { sendNativeMessage } from "../../services/nativeBridge";
+import { ChevronLeft, Upload, MapPin, Loader2, Camera, Image as ImageIcon } from "lucide-react";
+import { sendNativeMessage, isMauiHybrid, getCurrentLocation, requestLocationPermission, pickNativeImage } from "../../services/nativeBridge";
 import { apiService } from "../../services/apiService";
 import { DEFAULT_AVATARS, DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
@@ -120,53 +120,81 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
     });
   };
 
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = async () => {
     setLocationError(null);
-
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setLocationError("Geolocalização não é suportada neste dispositivo.");
-      return;
-    }
-
     setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
+
+    try {
+      let coords: { latitude: number; longitude: number } | null = null;
+
+      // 1. Tenta obter coordenadas diretamente pelo bridge nativo do MAUI
+      if (isMauiHybrid()) {
         try {
-          const { latitude, longitude } = position.coords;
-          const res = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`
-          );
-          if (!res.ok) throw new Error("Falha ao consultar localização.");
-          const data = await res.json();
+          coords = await getCurrentLocation();
+        } catch (e: any) {
+          console.warn("Bridge nativo de localização:", e);
+        }
+      }
 
-          const cidade = data.city || data.locality || data.principalSubdivision || "";
-          const estado = data.principalSubdivision || "";
-          const pais = data.countryName || "";
-          const partes = [cidade, estado, pais].filter(Boolean);
-
-          if (partes.length === 0) {
-            setLocationError("Não foi possível identificar sua cidade. Preencha manualmente.");
-            return;
-          }
-
-          handleChange("location", partes.join(", "));
-        } catch (err) {
-          console.warn("Erro ao obter localização:", err);
-          setLocationError("Não foi possível obter sua localização agora. Preencha manualmente.");
-        } finally {
+      // 2. Se não estiver no MAUI ou falhou, tenta HTML5 Geolocation padrão
+      if (!coords) {
+        if (typeof navigator === "undefined" || !navigator.geolocation) {
+          setLocationError("Geolocalização não é suportada neste dispositivo.");
           setIsLocating(false);
+          return;
         }
-      },
-      (err) => {
-        setIsLocating(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          setLocationError("Permissão de localização negada. Preencha manualmente.");
-        } else {
-          setLocationError("Não foi possível obter sua localização agora. Preencha manualmente.");
+
+        coords = await new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+            (err) => reject(err),
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+          );
+        });
+      }
+
+      const res = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.latitude}&longitude=${coords.longitude}&localityLanguage=pt`
+      );
+      if (!res.ok) throw new Error("Falha ao consultar localização.");
+      const data = await res.json();
+
+      const cidade = data.city || data.locality || data.principalSubdivision || "";
+      const estado = data.principalSubdivision || "";
+      const pais = data.countryName || "";
+      const partes = [cidade, estado, pais].filter(Boolean);
+
+      if (partes.length === 0) {
+        setLocationError("Não foi possível identificar sua cidade. Preencha manualmente.");
+        return;
+      }
+
+      handleChange("location", partes.join(", "));
+    } catch (err: any) {
+      console.warn("Erro ao obter localização:", err);
+      if (err?.code === 1 || err?.message?.includes("negada") || err?.message?.includes("denied")) {
+        setLocationError("Permissão de localização negada pelo dispositivo. Preencha manualmente.");
+      } else {
+        setLocationError("Não foi possível obter sua localização agora. Preencha manualmente.");
+      }
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  const handlePhotoClick = async () => {
+    if (isMauiHybrid()) {
+      try {
+        const nativePhoto = await pickNativeImage(false);
+        if (nativePhoto?.dataUrl) {
+          setAvatarUrl(nativePhoto.dataUrl);
+          return;
         }
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
-    );
+      } catch (err) {
+        console.warn("Seleção nativa de foto cancelada ou com erro:", err);
+      }
+    }
+    fileInputRef.current?.click();
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -292,7 +320,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
             </div>
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handlePhotoClick}
               title="Fazer upload de foto"
               aria-label="Fazer upload de foto de perfil"
               style={{
