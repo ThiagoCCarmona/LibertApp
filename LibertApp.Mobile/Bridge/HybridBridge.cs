@@ -382,33 +382,15 @@ public class HybridBridge
 
     private async Task<object?> HandleCheckMediaPermission()
     {
-#if ANDROID
-        var photosStatus = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.Photos>();
         var camStatus = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.Camera>();
-        bool granted = photosStatus == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted ||
-                       camStatus == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted;
+        bool granted = camStatus == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted;
         return new { granted };
-#else
-        var status = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.Photos>();
-        return new { granted = status == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted };
-#endif
     }
 
     private async Task<object?> HandleRequestMediaPermission(string? payload)
     {
-        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
-        bool camera = doc.TryGetProperty("camera", out var c) && c.GetBoolean();
-
-        if (camera)
-        {
-            var camStatus = await Microsoft.Maui.ApplicationModel.Permissions.RequestAsync<Microsoft.Maui.ApplicationModel.Permissions.Camera>();
-            return new { granted = camStatus == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted };
-        }
-        else
-        {
-            var photosStatus = await Microsoft.Maui.ApplicationModel.Permissions.RequestAsync<Microsoft.Maui.ApplicationModel.Permissions.Photos>();
-            return new { granted = photosStatus == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted };
-        }
+        var camStatus = await Microsoft.Maui.ApplicationModel.Permissions.RequestAsync<Microsoft.Maui.ApplicationModel.Permissions.Camera>();
+        return new { granted = camStatus == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted };
     }
 
     private async Task<object?> HandlePickImage(bool fromCamera)

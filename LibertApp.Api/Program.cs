@@ -94,6 +94,17 @@ using (var scope = app.Services.CreateScope())
         ConquistaId INTEGER NOT NULL,
         DataConquistada TEXT NOT NULL
     );");
+    RunMigrationStatement(@"CREATE TABLE IF NOT EXISTS UsuarioNotificacoes (
+        Id INTEGER NOT NULL CONSTRAINT PK_UsuarioNotificacoes PRIMARY KEY AUTOINCREMENT,
+        UsuarioId INTEGER NOT NULL,
+        RemetenteId INTEGER NOT NULL,
+        RemetenteNome TEXT NOT NULL,
+        Tipo TEXT NOT NULL,
+        Titulo TEXT NOT NULL,
+        Mensagem TEXT NOT NULL,
+        DataCriacao TEXT NOT NULL,
+        Lida INTEGER NOT NULL DEFAULT 0
+    );");
 
     // O Administrador não compete nem acumula pontos no pódio
     RunMigrationStatement("UPDATE Usuarios SET Pontos = 0 WHERE IsAdmin = 1;");

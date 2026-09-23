@@ -26,13 +26,13 @@ export interface UserProfileData {
   }[];
 }
 
-const INCENTIVE_STORAGE_KEY = "libertapp_incentives_sent";
 const MAX_INCENTIVES_PER_HOUR = 3;
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
-function getRecentIncentives(): number[] {
+function getRecentIncentives(targetUserId?: number | string): number[] {
+  if (!targetUserId) return [];
   try {
-    const raw = localStorage.getItem(INCENTIVE_STORAGE_KEY);
+    const raw = localStorage.getItem(`libertapp_incentives_sent_${targetUserId}`);
     const list: number[] = raw ? JSON.parse(raw) : [];
     const now = Date.now();
     return list.filter((t) => now - t < ONE_HOUR_MS);
@@ -41,11 +41,36 @@ function getRecentIncentives(): number[] {
   }
 }
 
-function recordIncentive(): number[] {
-  const recent = getRecentIncentives();
+function recordIncentive(targetUserId: number | string): number[] {
+  if (!targetUserId) return [];
+  const recent = getRecentIncentives(targetUserId);
   recent.push(Date.now());
-  localStorage.setItem(INCENTIVE_STORAGE_KEY, JSON.stringify(recent));
+  localStorage.setItem(`libertapp_incentives_sent_${targetUserId}`, JSON.stringify(recent));
   return recent;
+}
+
+function appendLocalNotificationForUser(targetUserId: number | string, notification: { titulo: string; mensagem: string; tipo: string }) {
+  try {
+    const key = `libertapp_notifications_${targetUserId}`;
+    const raw = localStorage.getItem(key);
+    const list: any[] = raw ? JSON.parse(raw) : [];
+    list.push({
+      id: Date.now(),
+      usuarioId: Number(targetUserId),
+      remetenteNome: (() => {
+        try {
+          const s = localStorage.getItem("currentUser");
+          return s ? JSON.parse(s)?.nome || "Um colega" : "Um colega";
+        } catch { return "Um colega"; }
+      })(),
+      tipo: notification.tipo,
+      titulo: notification.titulo,
+      mensagem: notification.mensagem,
+      dataCriacao: new Date().toISOString(),
+    });
+    localStorage.setItem(key, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent("libertapp_notification_received", { detail: { targetUserId } }));
+  } catch {}
 }
 
 interface UserProfileModalProps {
@@ -62,12 +87,13 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
   const [userPosts, setUserPosts] = useState<any[]>(user?.posts || []);
   const [profileDetails, setProfileDetails] = useState<UserProfileData | null>(user);
   const [loadingPosts, setLoadingPosts] = useState(false);
-  const [recentIncentives, setRecentIncentives] = useState<number[]>(getRecentIncentives);
+  const [recentIncentives, setRecentIncentives] = useState<number[]>(() => getRecentIncentives(user?.id));
 
   const remainingIncentives = Math.max(0, MAX_INCENTIVES_PER_HOUR - recentIncentives.length);
 
   useEffect(() => {
     if (!isOpen || !user) return;
+    setRecentIncentives(getRecentIncentives(user.id));
     setFollowing(user.isFollowing ?? false);
     setProfileDetails(user);
 
@@ -136,15 +162,21 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
       if (onToggleFollow && user.id) {
         onToggleFollow(user.id, true);
       }
-      const callerId = (() => {
+      const callerInfo = (() => {
         try {
           const s = localStorage.getItem("currentUser");
-          return s ? JSON.parse(s)?.id || 1 : 1;
-        } catch { return 1; }
+          const u = s ? JSON.parse(s) : null;
+          return { id: u?.id || 1, name: u?.nome || "Um colega" };
+        } catch { return { id: 1, name: "Um colega" }; }
       })();
       if (user.id) {
+        appendLocalNotificationForUser(user.id, {
+          tipo: "follow",
+          titulo: "Novo Seguidor! 🌱",
+          mensagem: `${callerInfo.name} começou a seguir você no LibertApp!`,
+        });
         try {
-          await apiService.toggleFollow(user.id, callerId);
+          await apiService.toggleFollow(user.id, callerInfo.id);
         } catch {
           try {
             await sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: user.id });
@@ -186,33 +218,41 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
   };
 
   const handleSendIncentive = async () => {
-    const freshRecent = getRecentIncentives();
+    if (!user.id) return;
+    const freshRecent = getRecentIncentives(user.id);
     if (freshRecent.length >= MAX_INCENTIVES_PER_HOUR) {
       const oldest = Math.min(...freshRecent);
       const minutesToWait = Math.max(1, Math.ceil((ONE_HOUR_MS - (Date.now() - oldest)) / 60000));
       notify({
         title: "Limite de Incentivos Atingido",
-        message: `Você já enviou ${MAX_INCENTIVES_PER_HOUR} incentivos nesta hora. Aguarde ${minutesToWait} min para enviar novamente.`,
+        message: `Você já enviou ${MAX_INCENTIVES_PER_HOUR} incentivos para ${user.name} nesta hora. Aguarde ${minutesToWait} min para incentivá-lo novamente.`,
       });
       return;
     }
 
-    const updated = recordIncentive();
+    const updated = recordIncentive(user.id);
     setRecentIncentives(updated);
     const newRemaining = Math.max(0, MAX_INCENTIVES_PER_HOUR - updated.length);
 
     setIncentiveSent(true);
 
-    const callerId = (() => {
+    const callerInfo = (() => {
       try {
         const s = localStorage.getItem("currentUser");
-        return s ? JSON.parse(s)?.id || 1 : 1;
-      } catch { return 1; }
+        const u = s ? JSON.parse(s) : null;
+        return { id: u?.id || 1, name: u?.nome || "Um colega" };
+      } catch { return { id: 1, name: "Um colega" }; }
     })();
 
     if (user.id) {
+      appendLocalNotificationForUser(user.id, {
+        tipo: "incentive",
+        titulo: "Incentivo Recebido! 🌟",
+        mensagem: `${callerInfo.name} te enviou um incentivo de presença e foco!`,
+      });
+
       try {
-        await apiService.sendIncentive(user.id, callerId);
+        await apiService.sendIncentive(user.id, callerInfo.id);
       } catch {
         try {
           await sendNativeIncentive(user.id);
@@ -222,7 +262,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
 
     notify({
       title: "Incentivo Enviado! 🎉",
-      message: `Você enviou um incentivo de presença para ${user.name}! (+5 pontos) • Restam ${newRemaining} nesta hora.`,
+      message: `Você enviou um incentivo de presença para ${user.name}! (+5 pontos) • Restam ${newRemaining} para este colega nesta hora.`,
     });
 
     setTimeout(() => setIncentiveSent(false), 3500);

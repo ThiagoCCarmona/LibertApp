@@ -201,6 +201,18 @@ public class UsersController : ControllerBase
 
             var caller = await _context.Usuarios.FindAsync(request.CallerId);
             if (caller != null) caller.Pontos += 10; // +10 pontos por conectar com colegas
+
+            _context.UsuarioNotificacoes.Add(new UsuarioNotificacao
+            {
+                UsuarioId = id,
+                RemetenteId = request.CallerId,
+                RemetenteNome = caller?.Nome ?? "Um colega",
+                Tipo = "follow",
+                Titulo = "Novo Seguidor! 🌱",
+                Mensagem = $"{caller?.Nome ?? "Um colega"} começou a seguir você no LibertApp!",
+                DataCriacao = DateTime.UtcNow,
+                Lida = false
+            });
         }
 
         await _context.SaveChangesAsync();
@@ -217,10 +229,54 @@ public class UsersController : ControllerBase
         if (caller != null)
         {
             caller.Pontos += 5; // +5 pontos por incentivar colegas
+        }
+
+        _context.UsuarioNotificacoes.Add(new UsuarioNotificacao
+        {
+            UsuarioId = id,
+            RemetenteId = request.CallerId,
+            RemetenteNome = caller?.Nome ?? "Um colega",
+            Tipo = "incentive",
+            Titulo = "Incentivo Recebido! 🌟",
+            Mensagem = $"{caller?.Nome ?? "Um colega"} te enviou um incentivo de presença e foco!",
+            DataCriacao = DateTime.UtcNow,
+            Lida = false
+        });
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { targetUserId = id, callerId = request.CallerId, pontosGanhos = 5 });
+    }
+
+    [HttpGet("{id}/notifications")]
+    public async Task<IActionResult> GetUnreadNotifications(int id)
+    {
+        var notifs = await _context.UsuarioNotificacoes
+            .Where(n => n.UsuarioId == id && !n.Lida)
+            .OrderByDescending(n => n.DataCriacao)
+            .Take(20)
+            .ToListAsync();
+
+        if (notifs.Any())
+        {
+            foreach (var n in notifs)
+            {
+                n.Lida = true;
+            }
             await _context.SaveChangesAsync();
         }
 
-        return Ok(new { targetUserId = id, callerId = request.CallerId, pontosGanhos = 5 });
+        return Ok(notifs.Select(n => new
+        {
+            n.Id,
+            n.UsuarioId,
+            n.RemetenteId,
+            n.RemetenteNome,
+            n.Tipo,
+            n.Titulo,
+            n.Mensagem,
+            n.DataCriacao
+        }));
     }
 }
 

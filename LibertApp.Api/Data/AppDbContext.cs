@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<SessaoPomodoro> SessoesPomodoro => Set<SessaoPomodoro>();
     public DbSet<Conquista> Conquistas => Set<Conquista>();
     public DbSet<UsuarioConquista> UsuarioConquistas => Set<UsuarioConquista>();
+    public DbSet<UsuarioNotificacao> UsuarioNotificacoes => Set<UsuarioNotificacao>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

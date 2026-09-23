@@ -103,6 +103,37 @@ function checkScreenTimeLimit() {
 }
 
 async function checkNewInteractions(usuarioId: number) {
+  if (!usuarioId) return;
+
+  // 1. Notificações diretas da API Central (novos seguidores, incentivos de presença recebidos)
+  try {
+    const unread = await apiService.getUnreadNotifications(usuarioId);
+    if (unread && Array.isArray(unread)) {
+      for (const n of unread) {
+        notify(
+          n.titulo || (n.tipo === "follow" ? "Novo Seguidor! 🌱" : "Incentivo Recebido! 🌟"),
+          n.mensagem
+        );
+      }
+    }
+  } catch {}
+
+  // 2. Fila local de notificações (para testes instantâneos ou suporte offline)
+  try {
+    const localKey = `libertapp_notifications_${usuarioId}`;
+    const raw = localStorage.getItem(localKey);
+    if (raw) {
+      const list: any[] = JSON.parse(raw);
+      if (Array.isArray(list) && list.length > 0) {
+        localStorage.removeItem(localKey);
+        for (const item of list) {
+          notify(item.titulo, item.mensagem);
+        }
+      }
+    }
+  } catch {}
+
+  // 3. Novas curtidas e comentários em publicações
   try {
     const posts = await apiService.getUserPosts(usuarioId);
     const isFirstCheck = lastKnownByPostId.size === 0;
@@ -173,7 +204,14 @@ export function startNotificationScheduler(usuarioId: number): () => void {
   screenTimeTimer = window.setInterval(checkScreenTimeLimit, 15 * 60 * 1000);
 
   checkNewInteractions(usuarioId);
-  interactionsTimer = window.setInterval(() => checkNewInteractions(usuarioId), 2 * 60 * 1000);
+  interactionsTimer = window.setInterval(() => checkNewInteractions(usuarioId), 25 * 1000); // a cada 25 segundos
+
+  const handleNotificationEvent = (e: any) => {
+    if (!e.detail?.targetUserId || Number(e.detail.targetUserId) === Number(usuarioId)) {
+      checkNewInteractions(usuarioId);
+    }
+  };
+  window.addEventListener("libertapp_notification_received", handleNotificationEvent);
 
   scheduleProfileIncentive(usuarioId);
 
@@ -182,6 +220,7 @@ export function startNotificationScheduler(usuarioId: number): () => void {
     if (screenTimeTimer) window.clearInterval(screenTimeTimer);
     if (interactionsTimer) window.clearInterval(interactionsTimer);
     if (profileIncentiveTimer) window.clearInterval(profileIncentiveTimer);
+    window.removeEventListener("libertapp_notification_received", handleNotificationEvent);
     lastKnownByPostId.clear();
   };
 }

@@ -178,7 +178,7 @@ export function ProfileScreen({
   const [hasUsageAccess, setHasUsageAccess] = React.useState<boolean>(() => localStorage.getItem("perm_usage") === "true");
   const [hasNotificationPermission, setHasNotificationPermission] = React.useState<boolean>(() => localStorage.getItem("perm_notification") === "true");
   const [hasLocationPermission, setHasLocationPermission] = React.useState<boolean>(() => localStorage.getItem("perm_location") === "true");
-  const [hasMediaPermission, setHasMediaPermission] = React.useState<boolean>(() => localStorage.getItem("perm_media") === "true");
+  const [hasMediaPermission, setHasMediaPermission] = React.useState<boolean>(false);
   const [isTestingNotification, setIsTestingNotification] = React.useState(false);
   const [isRefreshingPermissions, setIsRefreshingPermissions] = React.useState(false);
 
@@ -198,18 +198,22 @@ export function ProfileScreen({
       if (usageRes.status === "fulfilled") {
         setHasUsageAccess(usageRes.value);
         if (usageRes.value) localStorage.setItem("perm_usage", "true");
+        else localStorage.removeItem("perm_usage");
       }
       if (notifRes.status === "fulfilled") {
         setHasNotificationPermission(notifRes.value);
         if (notifRes.value) localStorage.setItem("perm_notification", "true");
+        else localStorage.removeItem("perm_notification");
       }
       if (locRes.status === "fulfilled") {
         setHasLocationPermission(locRes.value);
         if (locRes.value) localStorage.setItem("perm_location", "true");
+        else localStorage.removeItem("perm_location");
       }
       if (mediaRes.status === "fulfilled") {
         setHasMediaPermission(mediaRes.value);
         if (mediaRes.value) localStorage.setItem("perm_media", "true");
+        else localStorage.removeItem("perm_media");
       }
 
       // Atualiza também tempo de tela em tempo real
@@ -267,9 +271,13 @@ export function ProfileScreen({
   };
 
   const handleRequestMediaPermission = async () => {
-    const granted = await requestMediaPermission(false);
+    const granted = await requestMediaPermission(true);
     setHasMediaPermission(granted);
-    if (granted) localStorage.setItem("perm_media", "true");
+    if (granted) {
+      localStorage.setItem("perm_media", "true");
+    } else {
+      localStorage.removeItem("perm_media");
+    }
   };
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);

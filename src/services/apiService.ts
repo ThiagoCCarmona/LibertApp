@@ -329,6 +329,19 @@ export const apiService = {
     });
   },
 
+  async getUnreadNotifications(userId: number): Promise<Array<{
+    id: number;
+    usuarioId: number;
+    remetenteId: number;
+    remetenteNome: string;
+    tipo: string;
+    titulo: string;
+    mensagem: string;
+    dataCriacao: string;
+  }>> {
+    return request<any[]>(`/api/users/${userId}/notifications`);
+  },
+
   // Gamificação & Pomodoro
   async recordPomodoro(usuarioId: number, tipo: string, minutos: number): Promise<any> {
     return request<any>("/api/pomodoro/session", {
