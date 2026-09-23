@@ -38,20 +38,21 @@ function isWithinNightMode(): boolean {
 }
 
 function notify(title: string, message: string) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("libertapp_inapp_notification", {
+        detail: { title, message },
+      })
+    );
+  }
+
   if (isMauiHybrid()) {
     sendNativeMessage("SHOW_LOCAL_NOTIFICATION", { title, message }).catch(() => {});
   } else {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("libertapp_inapp_notification", {
-          detail: { title, message },
-        })
-      );
-      if ("Notification" in window && Notification.permission === "granted") {
-        try {
-          new Notification(title, { body: message });
-        } catch {}
-      }
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification(title, { body: message });
+      } catch {}
     }
   }
 }

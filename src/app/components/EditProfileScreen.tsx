@@ -19,6 +19,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -132,7 +133,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
         try {
           coords = await getCurrentLocation();
         } catch (e: any) {
-          console.warn("Bridge nativo de localização:", e);
+          console.warn("Bridge nativo de localização falhou, tentando fallback web:", e);
         }
       }
 
@@ -148,24 +149,47 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
           navigator.geolocation.getCurrentPosition(
             (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
             (err) => reject(err),
-            { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+            { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
           );
         });
       }
 
-      const res = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.latitude}&longitude=${coords.longitude}&localityLanguage=pt`
-      );
-      if (!res.ok) throw new Error("Falha ao consultar localização.");
-      const data = await res.json();
+      // 3. Consulta reversa de cidade/estado com múltiplos provedores
+      let partes: string[] = [];
 
-      const cidade = data.city || data.locality || data.principalSubdivision || "";
-      const estado = data.principalSubdivision || "";
-      const pais = data.countryName || "";
-      const partes = [cidade, estado, pais].filter(Boolean);
+      // Provedor 1: BigDataCloud
+      try {
+        const res = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.latitude}&longitude=${coords.longitude}&localityLanguage=pt`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const cidade = data.city || data.locality || data.principalSubdivision || "";
+          const estado = data.principalSubdivision || "";
+          const pais = data.countryName || "";
+          partes = [cidade, estado, pais].filter(Boolean);
+        }
+      } catch {}
+
+      // Provedor 2: OpenStreetMap Nominatim
+      if (partes.length === 0) {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&accept-language=pt`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const cidade = addr.city || addr.town || addr.municipality || addr.village || "";
+            const estado = addr.state || "";
+            const pais = addr.country || "";
+            partes = [cidade, estado, pais].filter(Boolean);
+          }
+        } catch {}
+      }
 
       if (partes.length === 0) {
-        setLocationError("Não foi possível identificar sua cidade. Preencha manualmente.");
+        handleChange("location", `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
         return;
       }
 
@@ -173,16 +197,38 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
     } catch (err: any) {
       console.warn("Erro ao obter localização:", err);
       if (err?.code === 1 || err?.message?.includes("negada") || err?.message?.includes("denied")) {
-        setLocationError("Permissão de localização negada pelo dispositivo. Preencha manualmente.");
+        setLocationError("Permissão de localização negada pelo dispositivo. Digite sua cidade manualmente.");
       } else {
-        setLocationError("Não foi possível obter sua localização agora. Preencha manualmente.");
+        setLocationError("Não foi possível obter sua localização agora. Digite manualmente.");
       }
     } finally {
       setIsLocating(false);
     }
   };
 
-  const handlePhotoClick = async () => {
+  const handlePhotoClick = () => {
+    setPhotoModalOpen(true);
+  };
+
+  const handlePickFromCamera = async () => {
+    setPhotoModalOpen(false);
+    if (isMauiHybrid()) {
+      try {
+        const nativePhoto = await pickNativeImage(true);
+        if (nativePhoto?.dataUrl) {
+          setAvatarUrl(nativePhoto.dataUrl);
+          return;
+        }
+      } catch (err) {
+        console.warn("Captura da câmera cancelada ou erro:", err);
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    setPhotoModalOpen(false);
     if (isMauiHybrid()) {
       try {
         const nativePhoto = await pickNativeImage(false);
@@ -191,7 +237,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
           return;
         }
       } catch (err) {
-        console.warn("Seleção nativa de foto cancelada ou com erro:", err);
+        console.warn("Seleção de galeria cancelada ou erro:", err);
       }
     }
     fileInputRef.current?.click();
@@ -563,6 +609,111 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
           {saved ? "✓ Salvo com sucesso!" : "Salvar Alterações"}
         </button>
       </div>
+      {/* Modal de Escolha da Foto (Câmera ou Galeria) */}
+      {photoModalOpen && (
+        <div
+          onClick={() => setPhotoModalOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            backgroundColor: "rgba(45, 58, 46, 0.45)",
+            backdropFilter: "blur(3px)",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            animation: "fadeIn 0.2s ease-out",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#FDFBF7",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: "24px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px",
+              boxShadow: "0 -8px 32px rgba(45, 58, 46, 0.15)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+            <div style={{ textAlign: "center", marginBottom: 6 }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(45,58,46,0.2)", margin: "0 auto 12px" }} />
+              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: "#2D3A2E", margin: 0 }}>
+                Foto de Perfil
+              </h3>
+              <p style={{ fontSize: 12, color: "#7A8A7B", marginTop: 4, margin: 0 }}>
+                Escolha como deseja adicionar sua foto
+              </p>
+            </div>
+
+            <button
+              onClick={handlePickFromCamera}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "14px 16px",
+                borderRadius: 14,
+                border: "1px solid rgba(45,58,46,0.08)",
+                background: "#F5EFE3",
+                color: "#2D3A2E",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(214,140,112,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Camera size={18} color="#D68C70" />
+              </div>
+              <span>Tirar Foto com a Câmera</span>
+            </button>
+
+            <button
+              onClick={handlePickFromGallery}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "14px 16px",
+                borderRadius: 14,
+                border: "1px solid rgba(45,58,46,0.08)",
+                background: "#F5EFE3",
+                color: "#2D3A2E",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(107,143,109,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ImageIcon size={18} color="#6B8F6D" />
+              </div>
+              <span>Escolher da Galeria de Fotos</span>
+            </button>
+
+            <button
+              onClick={() => setPhotoModalOpen(false)}
+              style={{
+                marginTop: 4,
+                padding: "12px",
+                borderRadius: 12,
+                border: "none",
+                background: "transparent",
+                color: "#7A8A7B",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

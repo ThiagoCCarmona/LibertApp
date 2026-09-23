@@ -161,6 +161,12 @@ public class FeedController : ControllerBase
 
         await _context.SaveChangesAsync();
         var totalLikes = await _context.PostLikes.CountAsync(l => l.PostId == id);
+        var post = await _context.FeedPosts.FindAsync(id);
+        if (post != null)
+        {
+            post.Likes = totalLikes;
+            await _context.SaveChangesAsync();
+        }
         return Ok(new { postId = id, likes = totalLikes, liked = isLiked });
     }
 
@@ -215,6 +221,14 @@ public class FeedController : ControllerBase
 
         _context.PostComentarios.Add(comentario);
         user.Pontos += 5; // +5 pontos por comentar
+
+        var post = await _context.FeedPosts.FindAsync(id);
+        if (post != null)
+        {
+            var commentCount = await _context.PostComentarios.CountAsync(c => c.PostId == id) + 1;
+            post.Comments = commentCount;
+        }
+
         await _context.SaveChangesAsync();
 
         return Ok(new
@@ -303,7 +317,15 @@ public class FeedController : ControllerBase
         var posts = await _context.FeedPosts
             .Where(p => p.UsuarioId == usuarioId)
             .OrderByDescending(p => p.DataPublicacao)
-            .Select(p => new
+            .ToListAsync();
+
+        var result = new List<object>();
+        foreach (var p in posts)
+        {
+            var likesCount = await _context.PostLikes.CountAsync(l => l.PostId == p.Id);
+            var commentCount = await _context.PostComentarios.CountAsync(c => c.PostId == p.Id);
+
+            result.Add(new
             {
                 id = p.Id,
                 usuarioId = p.UsuarioId,
@@ -316,14 +338,14 @@ public class FeedController : ControllerBase
                 bgColor = p.BgColor,
                 borderColor = p.BorderColor,
                 icon = p.Icon,
-                likes = p.Likes,
-                comments = p.Comments,
+                likes = likesCount > 0 ? likesCount : p.Likes,
+                comments = commentCount > 0 ? commentCount : p.Comments,
                 liked = false,
                 time = GetRelativeTime(p.DataPublicacao)
-            })
-            .ToListAsync();
+            });
+        }
 
-        return Ok(posts);
+        return Ok(result);
     }
 
     private static string GetRelativeTime(DateTime dt)

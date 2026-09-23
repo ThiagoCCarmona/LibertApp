@@ -17,11 +17,19 @@ const pendingCallbacks = new Map<string, CallbackFn>();
 
 // Listener global para respostas vindas do C# via HybridWebView
 if (typeof window !== 'undefined') {
-  (window as any).__onNativeBridgeResponse = (response: BridgeResponse) => {
-    if (response.callbackId && pendingCallbacks.has(response.callbackId)) {
-      const callback = pendingCallbacks.get(response.callbackId);
-      pendingCallbacks.delete(response.callbackId);
-      callback?.(response);
+  (window as any).__onNativeBridgeResponse = (raw: any) => {
+    if (!raw) return;
+    const cbId = raw.callbackId || raw.CallbackId;
+    if (cbId && pendingCallbacks.has(cbId)) {
+      const callback = pendingCallbacks.get(cbId);
+      pendingCallbacks.delete(cbId);
+      const normalized: BridgeResponse = {
+        success: raw.success !== undefined ? !!raw.success : (raw.Success !== undefined ? !!raw.Success : true),
+        data: raw.data !== undefined ? raw.data : raw.Data,
+        error: raw.error || raw.Error,
+        callbackId: cbId,
+      };
+      callback?.(normalized);
     }
   };
 }
@@ -422,7 +430,16 @@ export async function sendNativeMessage<T = any>(action: string, payload?: any):
 
   if (isMauiHybrid()) {
     return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        if (pendingCallbacks.has(callbackId)) {
+          pendingCallbacks.delete(callbackId);
+          console.warn(`[NativeBridge Timeout] Operação ${action} excedeu o tempo limite.`);
+          reject(new Error(`Timeout na operação nativa: ${action}`));
+        }
+      }, 10000);
+
       pendingCallbacks.set(callbackId, (response) => {
+        clearTimeout(timer);
         if (response.success) {
           resolve(response.data as T);
         } else {

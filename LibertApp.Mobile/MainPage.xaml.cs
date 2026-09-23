@@ -50,8 +50,9 @@ public partial class MainPage : ContentPage
         {
             try
             {
+                var encoded = Uri.EscapeDataString(responseJson);
                 await webView.EvaluateJavaScriptAsync(
-                    $"window.__onNativeBridgeResponse && window.__onNativeBridgeResponse({responseJson});");
+                    $"window.__onNativeBridgeResponse && window.__onNativeBridgeResponse(JSON.parse(decodeURIComponent('{encoded}')));");
             }
             catch
             {

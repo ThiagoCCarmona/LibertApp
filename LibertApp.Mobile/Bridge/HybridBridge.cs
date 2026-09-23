@@ -31,14 +31,19 @@ public class HybridBridge
         _deviceWellbeingService = deviceWellbeingService;
     }
 
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
+
     public async Task<string> HandleMessageAsync(string rawMessage)
     {
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         BridgeMessage? message;
 
         try
         {
-            message = JsonSerializer.Deserialize<BridgeMessage>(rawMessage, options);
+            message = JsonSerializer.Deserialize<BridgeMessage>(rawMessage, _jsonOptions);
         }
         catch (Exception ex)
         {
@@ -46,7 +51,7 @@ public class HybridBridge
             {
                 Success = false,
                 Error = $"Invalid JSON format: {ex.Message}"
-            });
+            }, _jsonOptions);
         }
 
         if (message == null || string.IsNullOrWhiteSpace(message.Action))
@@ -55,7 +60,7 @@ public class HybridBridge
             {
                 Success = false,
                 Error = "Empty action"
-            });
+            }, _jsonOptions);
         }
 
         try
@@ -102,7 +107,7 @@ public class HybridBridge
                 Success = true,
                 Data = result,
                 CallbackId = message.CallbackId
-            });
+            }, _jsonOptions);
         }
         catch (Exception ex)
         {
@@ -111,7 +116,7 @@ public class HybridBridge
                 Success = false,
                 Error = ex.Message,
                 CallbackId = message.CallbackId
-            });
+            }, _jsonOptions);
         }
     }
 
@@ -317,8 +322,18 @@ public class HybridBridge
             throw new InvalidOperationException("Permissão de localização negada pelo usuário.");
         }
 
-        var location = await Microsoft.Maui.Devices.Sensors.Geolocation.Default.GetLocationAsync(
-            new Microsoft.Maui.Devices.Sensors.GeolocationRequest(Microsoft.Maui.Devices.Sensors.GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10)));
+        Microsoft.Maui.Devices.Sensors.Location? location = null;
+        try
+        {
+            location = await Microsoft.Maui.Devices.Sensors.Geolocation.Default.GetLastKnownLocationAsync();
+        }
+        catch { }
+
+        if (location == null)
+        {
+            location = await Microsoft.Maui.Devices.Sensors.Geolocation.Default.GetLocationAsync(
+                new Microsoft.Maui.Devices.Sensors.GeolocationRequest(Microsoft.Maui.Devices.Sensors.GeolocationAccuracy.Medium, TimeSpan.FromSeconds(6)));
+        }
 
         if (location == null)
         {

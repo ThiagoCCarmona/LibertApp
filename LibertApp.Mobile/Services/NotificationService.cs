@@ -24,34 +24,49 @@ public class NotificationService : INotificationService
     }
 
 #if ANDROID
-    private const string ChannelId = "libertapp_reminders";
+    private const string ChannelId = "libertapp_alerts_v2";
 
     private async Task<bool> ShowAndroidAsync(string title, string message)
     {
-        var status = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.PostNotifications>();
-        if (status != Microsoft.Maui.ApplicationModel.PermissionStatus.Granted)
+        var context = global::Android.App.Application.Context;
+
+        if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.Tiramisu)
         {
-            status = await Microsoft.Maui.ApplicationModel.Permissions.RequestAsync<Microsoft.Maui.ApplicationModel.Permissions.PostNotifications>();
+            var status = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.PostNotifications>();
+            if (status != Microsoft.Maui.ApplicationModel.PermissionStatus.Granted)
+            {
+                status = await Microsoft.Maui.ApplicationModel.Permissions.RequestAsync<Microsoft.Maui.ApplicationModel.Permissions.PostNotifications>();
+            }
+            if (status != Microsoft.Maui.ApplicationModel.PermissionStatus.Granted)
+            {
+                return false;
+            }
         }
-        if (status != Microsoft.Maui.ApplicationModel.PermissionStatus.Granted)
+        else
         {
-            return false;
+            var compat = AndroidX.Core.App.NotificationManagerCompat.From(context);
+            if (!compat.AreNotificationsEnabled())
+            {
+                return false;
+            }
         }
 
-        var context = global::Android.App.Application.Context;
         var notificationManager = (global::Android.App.NotificationManager)context.GetSystemService(global::Android.Content.Context.NotificationService)!;
 
         global::Android.App.Notification.Builder builder;
 
         if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.O)
         {
-            if (notificationManager.GetNotificationChannel(ChannelId) == null)
+            var channel = notificationManager.GetNotificationChannel(ChannelId);
+            if (channel == null)
             {
-                var channel = new global::Android.App.NotificationChannel(
-                    ChannelId, "Lembretes do LibertApp", global::Android.App.NotificationImportance.Default)
+                channel = new global::Android.App.NotificationChannel(
+                    ChannelId, "Lembretes do LibertApp", global::Android.App.NotificationImportance.High)
                 {
-                    Description = "Lembretes de respiro, limite de tela e interações da comunidade"
+                    Description = "Lembretes de respiro, limite de tela e avisos da comunidade"
                 };
+                channel.EnableVibration(true);
+                channel.EnableLights(true);
                 notificationManager.CreateNotificationChannel(channel);
             }
             builder = new global::Android.App.Notification.Builder(context, ChannelId);
@@ -61,11 +76,21 @@ public class NotificationService : INotificationService
             builder = new global::Android.App.Notification.Builder(context);
         }
 
-        var iconId = context.ApplicationInfo?.Icon ?? global::Android.Resource.Drawable.IcDialogInfo;
+        int iconId = global::Android.Resource.Drawable.IcDialogInfo;
+        try
+        {
+            if (context.ApplicationInfo?.Icon != 0)
+            {
+                iconId = context.ApplicationInfo!.Icon;
+            }
+        }
+        catch { }
 
         builder.SetContentTitle(title)
             .SetContentText(message)
             .SetSmallIcon(iconId)
+            .SetPriority((int)global::Android.App.NotificationPriority.High)
+            .SetDefaults(global::Android.App.NotificationDefaults.All)
             .SetAutoCancel(true);
 
         notificationManager.Notify(new Random().Next(1000, int.MaxValue), builder.Build());

@@ -37,16 +37,30 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Sempre mostrar splash ao abrir (Telas 1 -> 2)
+    // Exibe splash ao abrir e restaura sessão salva se usuário já estiver logado
     const timer = setTimeout(() => {
-      setCurrentScreen("login");
+      const isLogged = localStorage.getItem("isLoggedIn") === "true";
+      const hasUser = !!localStorage.getItem("currentUser");
+      if (isLogged && hasUser) {
+        setCurrentScreen("main");
+        setActiveTab("home");
+      } else {
+        setCurrentScreen("login");
+      }
       localStorage.setItem("splashShown", "true");
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
   const handleSplashComplete = () => {
-    setCurrentScreen("login");
+    const isLogged = localStorage.getItem("isLoggedIn") === "true";
+    const hasUser = !!localStorage.getItem("currentUser");
+    if (isLogged && hasUser) {
+      setCurrentScreen("main");
+      setActiveTab("home");
+    } else {
+      setCurrentScreen("login");
+    }
     localStorage.setItem("splashShown", "true");
   };
 
@@ -147,6 +161,7 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("currentUser");
     localStorage.removeItem("splashShown");
     setActiveTab("home");
     setCurrentScreen("login");

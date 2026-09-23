@@ -39,6 +39,15 @@ public static class MauiProgram
 			handler.PlatformView.SetWebChromeClient(new FileChooserWebChromeClient());
 			handler.PlatformView.Settings.SetGeolocationEnabled(true);
 			handler.PlatformView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
+			handler.PlatformView.Settings.DomStorageEnabled = true;
+			handler.PlatformView.Settings.DatabaseEnabled = true;
+			handler.PlatformView.Settings.AllowFileAccess = true;
+			try
+			{
+				global::Android.Webkit.CookieManager.Instance.SetAcceptCookie(true);
+				global::Android.Webkit.CookieManager.Instance.SetAcceptThirdPartyCookies(handler.PlatformView, true);
+			}
+			catch { }
 		});
 #endif
 

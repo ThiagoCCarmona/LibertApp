@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Bell, Moon, Smartphone, LogOut, Shield, Trash2, Image as ImageIcon, Award, Users, MapPin, Camera, CheckCircle2, AlertCircle, ExternalLink, RefreshCw } from "lucide-react";
+import { Bell, Moon, Smartphone, LogOut, Shield, Trash2, Image as ImageIcon, Award, Users, MapPin, Camera, CheckCircle2, AlertCircle, ExternalLink, RefreshCw, Clock, ChevronDown } from "lucide-react";
 import {
   sendNativeMessage,
   isMauiHybrid,
@@ -179,27 +179,34 @@ export function ProfileScreen({
   const [hasLocationPermission, setHasLocationPermission] = React.useState<boolean | null>(null);
   const [hasMediaPermission, setHasMediaPermission] = React.useState<boolean | null>(null);
   const [isTestingNotification, setIsTestingNotification] = React.useState(false);
+  const [isRefreshingPermissions, setIsRefreshingPermissions] = React.useState(false);
 
   const checkPermissions = React.useCallback(async () => {
+    setIsRefreshingPermissions(true);
     try {
-      const usage = await checkUsageAccess();
-      setHasUsageAccess(usage);
-    } catch {}
+      const [usageRes, notifRes, locRes, mediaRes] = await Promise.allSettled([
+        checkUsageAccess(),
+        checkNotificationPermission(),
+        checkLocationPermission(),
+        checkMediaPermission(),
+      ]);
 
-    try {
-      const notif = await checkNotificationPermission();
-      setHasNotificationPermission(notif);
-    } catch {}
+      if (usageRes.status === "fulfilled") setHasUsageAccess(usageRes.value);
+      if (notifRes.status === "fulfilled") setHasNotificationPermission(notifRes.value);
+      if (locRes.status === "fulfilled") setHasLocationPermission(locRes.value);
+      if (mediaRes.status === "fulfilled") setHasMediaPermission(mediaRes.value);
 
-    try {
-      const loc = await checkLocationPermission();
-      setHasLocationPermission(loc);
-    } catch {}
-
-    try {
-      const media = await checkMediaPermission();
-      setHasMediaPermission(media);
-    } catch {}
+      // Atualiza também tempo de tela em tempo real
+      try {
+        const mins = await sendNativeMessage<number>("GET_SCREEN_TIME_TODAY");
+        if (typeof mins === "number") {
+          setScreenTimeMinutesToday(mins);
+          setHasUsageAccess(true);
+        }
+      } catch {}
+    } finally {
+      setTimeout(() => setIsRefreshingPermissions(false), 500);
+    }
   }, []);
 
   const handleRequestUsageAccess = async () => {
@@ -213,7 +220,7 @@ export function ProfileScreen({
           if (parsed?.id) loadWellness(parsed.id);
         } catch {}
       }
-    }, 2000);
+    }, 1500);
   };
 
   const handleRequestNotificationPermission = async () => {
@@ -882,16 +889,22 @@ export function ProfileScreen({
                 </div>
                 <button
                   onClick={checkPermissions}
+                  disabled={isRefreshingPermissions}
                   title="Atualizar status"
                   style={{
                     background: "transparent",
                     border: "none",
-                    cursor: "pointer",
-                    color: "#7A8A7B",
-                    padding: 4,
+                    cursor: isRefreshingPermissions ? "default" : "pointer",
+                    color: isRefreshingPermissions ? "#D68C70" : "#7A8A7B",
+                    padding: 6,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 8,
+                    transition: "color 0.2s",
                   }}
                 >
-                  <RefreshCw size={14} />
+                  <RefreshCw size={15} className={isRefreshingPermissions ? "animate-spin" : ""} />
                 </button>
               </div>
 
@@ -1081,25 +1094,38 @@ export function ProfileScreen({
                 <ToggleSwitch enabled={breathingReminders} onChange={handleToggleBreathing} />
               </div>
               {breathingReminders && (
-                <select
-                  value={breathingIntervalMin}
-                  onChange={(e) => handleChangeBreathingInterval(parseInt(e.target.value, 10))}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(45,58,46,0.12)",
-                    background: "#FAF7F0",
-                    fontSize: 12,
-                    color: "#2D3A2E",
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
-                  aria-label="Frequência dos lembretes de respiro"
-                >
-                  {BREATHING_INTERVAL_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <p style={{ fontSize: 11, fontWeight: 500, color: "#7A8A7B", margin: 0 }}>
+                    Frequência do lembrete:
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                    {BREATHING_INTERVAL_OPTIONS.map((o) => {
+                      const isSelected = o.value === breathingIntervalMin;
+                      return (
+                        <button
+                          key={o.value}
+                          onClick={() => handleChangeBreathingInterval(o.value)}
+                          style={{
+                            padding: "8px 6px",
+                            borderRadius: 10,
+                            border: isSelected ? "1.5px solid #D68C70" : "1px solid rgba(45,58,46,0.1)",
+                            background: isSelected ? "#D68C70" : "#FAF7F0",
+                            color: isSelected ? "#FDFBF7" : "#2D3A2E",
+                            fontSize: 11.5,
+                            fontWeight: isSelected ? 700 : 500,
+                            cursor: "pointer",
+                            fontFamily: "'DM Sans', sans-serif",
+                            transition: "all 0.15s ease",
+                            textAlign: "center",
+                            boxShadow: isSelected ? "0 2px 8px rgba(214,140,112,0.25)" : "none",
+                          }}
+                        >
+                          {o.label.replace("A cada ", "")}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -1131,24 +1157,76 @@ export function ProfileScreen({
                 <ToggleSwitch enabled={nightMode} onChange={handleToggleNightMode} />
               </div>
               {nightMode && (
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <select
-                    value={nightModeStart}
-                    onChange={(e) => handleChangeNightModeStart(e.target.value)}
-                    style={{ flex: 1, padding: "8px 10px", borderRadius: 10, border: "1px solid rgba(45,58,46,0.12)", background: "#FAF7F0", fontSize: 12, color: "#2D3A2E", fontFamily: "'DM Sans', sans-serif" }}
-                    aria-label="Horário de início do modo noturno"
-                  >
-                    {HOUR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                  <span style={{ fontSize: 11, color: "#7A8A7B" }}>até</span>
-                  <select
-                    value={nightModeEnd}
-                    onChange={(e) => handleChangeNightModeEnd(e.target.value)}
-                    style={{ flex: 1, padding: "8px 10px", borderRadius: 10, border: "1px solid rgba(45,58,46,0.12)", background: "#FAF7F0", fontSize: 12, color: "#2D3A2E", fontFamily: "'DM Sans', sans-serif" }}
-                    aria-label="Horário de término do modo noturno"
-                  >
-                    {HOUR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
+                <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
+                  <div style={{ flex: 1, position: "relative" }}>
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: "#FAF7F0",
+                      border: "1px solid rgba(45,58,46,0.12)",
+                      borderRadius: 10,
+                      padding: "8px 10px",
+                    }}>
+                      <Clock size={13} color="#6B8F6D" />
+                      <select
+                        value={nightModeStart}
+                        onChange={(e) => handleChangeNightModeStart(e.target.value)}
+                        style={{
+                          width: "100%",
+                          background: "transparent",
+                          border: "none",
+                          outline: "none",
+                          fontSize: 12.5,
+                          fontWeight: 600,
+                          color: "#2D3A2E",
+                          fontFamily: "'DM Sans', sans-serif",
+                          cursor: "pointer",
+                          appearance: "none",
+                          WebkitAppearance: "none",
+                        }}
+                        aria-label="Horário de início do modo noturno"
+                      >
+                        {HOUR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                      <ChevronDown size={14} color="#7A8A7B" style={{ pointerEvents: "none", flexShrink: 0 }} />
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#7A8A7B" }}>até</span>
+                  <div style={{ flex: 1, position: "relative" }}>
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: "#FAF7F0",
+                      border: "1px solid rgba(45,58,46,0.12)",
+                      borderRadius: 10,
+                      padding: "8px 10px",
+                    }}>
+                      <Clock size={13} color="#6B8F6D" />
+                      <select
+                        value={nightModeEnd}
+                        onChange={(e) => handleChangeNightModeEnd(e.target.value)}
+                        style={{
+                          width: "100%",
+                          background: "transparent",
+                          border: "none",
+                          outline: "none",
+                          fontSize: 12.5,
+                          fontWeight: 600,
+                          color: "#2D3A2E",
+                          fontFamily: "'DM Sans', sans-serif",
+                          cursor: "pointer",
+                          appearance: "none",
+                          WebkitAppearance: "none",
+                        }}
+                        aria-label="Horário de término do modo noturno"
+                      >
+                        {HOUR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                      <ChevronDown size={14} color="#7A8A7B" style={{ pointerEvents: "none", flexShrink: 0 }} />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

@@ -9,11 +9,42 @@ public class DeviceWellbeingService : IDeviceWellbeingService
         {
             var context = global::Android.App.Application.Context;
             var appOps = (global::Android.App.AppOpsManager)context.GetSystemService(global::Android.Content.Context.AppOpsService)!;
-            var mode = appOps.CheckOpNoThrow(
-                global::Android.App.AppOpsManager.OpstrGetUsageStats,
-                global::Android.OS.Process.MyUid(),
-                context.PackageName!);
-            return mode == global::Android.App.AppOpsManagerMode.Allowed;
+
+            global::Android.App.AppOpsManagerMode mode;
+            if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.Q)
+            {
+                mode = appOps.UnsafeCheckOpNoThrow(
+                    global::Android.App.AppOpsManager.OpstrGetUsageStats,
+                    global::Android.OS.Process.MyUid(),
+                    context.PackageName!);
+            }
+            else
+            {
+                mode = appOps.CheckOpNoThrow(
+                    global::Android.App.AppOpsManager.OpstrGetUsageStats,
+                    global::Android.OS.Process.MyUid(),
+                    context.PackageName!);
+            }
+
+            if (mode == global::Android.App.AppOpsManagerMode.Allowed)
+            {
+                return true;
+            }
+
+            // Fallback prático em alguns aparelhos onde o AppOps retorna default mas o acesso foi concedido
+            try
+            {
+                var usageStatsManager = (global::Android.App.Usage.UsageStatsManager)context.GetSystemService(global::Android.Content.Context.UsageStatsService)!;
+                var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var list = usageStatsManager.QueryUsageStats(global::Android.App.Usage.UsageStatsInterval.Daily, now - 1000 * 3600 * 24, now);
+                if (list != null && list.Count > 0)
+                {
+                    return true;
+                }
+            }
+            catch { }
+
+            return false;
         }
         catch
         {
