@@ -17,12 +17,29 @@ public class FeedController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetFeed([FromQuery] int? callerId)
+    public async Task<IActionResult> GetFeed([FromQuery] int? callerId, [FromQuery] bool priorizarSeguindo = false)
     {
-        var posts = await _context.FeedPosts
-            .OrderByDescending(p => p.DataPublicacao)
-            .Take(50)
-            .ToListAsync();
+        var postsQuery = _context.FeedPosts.AsQueryable();
+
+        var followedIds = callerId.HasValue
+            ? await _context.UsuarioSeguidores
+                .Where(s => s.SeguidorId == callerId.Value)
+                .Select(s => s.SeguidoId)
+                .ToListAsync()
+            : new List<int>();
+
+        if (priorizarSeguindo && followedIds.Count > 0)
+        {
+            postsQuery = postsQuery
+                .OrderByDescending(p => followedIds.Contains(p.UsuarioId))
+                .ThenByDescending(p => p.DataPublicacao);
+        }
+        else
+        {
+            postsQuery = postsQuery.OrderByDescending(p => p.DataPublicacao);
+        }
+
+        var posts = await postsQuery.Take(50).ToListAsync();
 
         var likedPostIds = callerId.HasValue
             ? await _context.PostLikes.Where(l => l.UsuarioId == callerId.Value).Select(l => l.PostId).ToListAsync()
@@ -36,6 +53,7 @@ public class FeedController : ControllerBase
 
             result.Add(new
             {
+                seguindo = callerId.HasValue && p.UsuarioId != callerId.Value && followedIds.Contains(p.UsuarioId),
                 id = p.Id,
                 usuarioId = p.UsuarioId,
                 author = p.Autor,

@@ -12,6 +12,7 @@ import { BenefitsScreen } from "./components/BenefitsScreen";
 import { CardScreen } from "./components/CardScreen";
 import { LeaderboardScreen } from "./components/LeaderboardScreen";
 import { SearchUsersScreen } from "./components/SearchUsersScreen";
+import { startNotificationScheduler } from "../services/notificationScheduler";
 
 export type Tab = "home" | "activities" | "profile";
 export type Screen = "splash" | "login" | "signup" | "forgot" | "home" | "main" | "editProfile" | "benefits" | "card" | "leaderboard" | "searchUsers";
@@ -76,6 +77,58 @@ export default function App() {
   const handleBack = (backTo: Screen = "main") => {
     setCurrentScreen(backTo);
   };
+
+  // Expõe uma função global para o botão de voltar nativo (Android) do app .NET MAUI.
+  // Retorna true quando a navegação foi tratada aqui dentro da SPA (o nativo não faz nada);
+  // retorna false quando já estamos na tela raiz, para o nativo minimizar o app.
+  useEffect(() => {
+    (window as any).__handleNativeBack = (): boolean => {
+      if (currentScreen === "signup" || currentScreen === "forgot") {
+        setCurrentScreen("login");
+        return true;
+      }
+
+      if (
+        currentScreen === "editProfile" ||
+        currentScreen === "benefits" ||
+        currentScreen === "card" ||
+        currentScreen === "leaderboard" ||
+        currentScreen === "searchUsers"
+      ) {
+        handleBack("main");
+        return true;
+      }
+
+      if (currentScreen === "main" && activeTab !== "home") {
+        setActiveTab("home");
+        return true;
+      }
+
+      // Aba "Início" da tela principal, "login" e "splash" são consideradas telas raiz.
+      return false;
+    };
+
+    return () => {
+      delete (window as any).__handleNativeBack;
+    };
+  }, [currentScreen, activeTab]);
+
+  // Liga os lembretes locais (respiro, limite de tela, curtidas/comentários, perfil) assim
+  // que o usuário está logado e dentro do app. Só tem efeito dentro do app nativo.
+  useEffect(() => {
+    if (currentScreen !== "main") return;
+
+    let userId: number | undefined;
+    try {
+      const stored = localStorage.getItem("currentUser");
+      userId = stored ? JSON.parse(stored)?.id : undefined;
+    } catch {}
+
+    if (!userId) return;
+
+    const stop = startNotificationScheduler(userId);
+    return stop;
+  }, [currentScreen]);
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");

@@ -10,19 +10,25 @@ public class HybridBridge
     private readonly IChallengeService _challengeService;
     private readonly IBenefitService _benefitService;
     private readonly IFeedService _feedService;
+    private readonly INotificationService _notificationService;
+    private readonly IDeviceWellbeingService _deviceWellbeingService;
 
     public HybridBridge(
         IUserService userService,
         IPomodoroService pomodoroService,
         IChallengeService challengeService,
         IBenefitService benefitService,
-        IFeedService feedService)
+        IFeedService feedService,
+        INotificationService notificationService,
+        IDeviceWellbeingService deviceWellbeingService)
     {
         _userService = userService;
         _pomodoroService = pomodoroService;
         _challengeService = challengeService;
         _benefitService = benefitService;
         _feedService = feedService;
+        _notificationService = notificationService;
+        _deviceWellbeingService = deviceWellbeingService;
     }
 
     public async Task<string> HandleMessageAsync(string rawMessage)
@@ -72,6 +78,13 @@ public class HybridBridge
                 "SEARCH_USERS" => await HandleSearchUsers(message.Payload),
                 "TOGGLE_FOLLOW" => await HandleToggleFollow(message.Payload),
                 "UPDATE_PROFILE" => await HandleUpdateProfile(message.Payload),
+                "SHOW_LOCAL_NOTIFICATION" => await HandleShowLocalNotification(message.Payload),
+                "CHECK_USAGE_ACCESS" => _deviceWellbeingService.IsUsageAccessGranted(),
+                "REQUEST_USAGE_ACCESS" => HandleRequestUsageAccess(),
+                "GET_SCREEN_TIME_TODAY" => _deviceWellbeingService.GetScreenTimeMinutesToday(),
+                "CHECK_DND_ACCESS" => _deviceWellbeingService.IsDoNotDisturbAccessGranted(),
+                "REQUEST_DND_ACCESS" => HandleRequestDndAccess(),
+                "SET_DND_MODE" => HandleSetDndMode(message.Payload),
                 _ => throw new InvalidOperationException($"Unknown action: {message.Action}")
             };
 
@@ -187,6 +200,37 @@ public class HybridBridge
         int minutos = doc.TryGetProperty("minutos", out var m) ? m.GetInt32() : 25;
 
         return await _pomodoroService.RegistrarSessaoAsync(tipo, minutos);
+    }
+
+    private async Task<object?> HandleShowLocalNotification(string? payload)
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+        string title = doc.TryGetProperty("title", out var t) ? t.GetString() ?? "LibertApp" : "LibertApp";
+        string message = doc.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
+
+        var shown = await _notificationService.ShowNowAsync(title, message);
+        return new { shown };
+    }
+
+    private object HandleRequestUsageAccess()
+    {
+        _deviceWellbeingService.OpenUsageAccessSettings();
+        return new { opened = true };
+    }
+
+    private object HandleRequestDndAccess()
+    {
+        _deviceWellbeingService.OpenDoNotDisturbAccessSettings();
+        return new { opened = true };
+    }
+
+    private object HandleSetDndMode(string? payload)
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+        bool enabled = doc.TryGetProperty("enabled", out var e) && e.GetBoolean();
+
+        var applied = _deviceWellbeingService.SetDigitalNightMode(enabled);
+        return new { applied, enabled };
     }
 
     private async Task<object?> HandleUpdateProfile(string? payload)

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ChevronLeft, Upload } from "lucide-react";
+import { ChevronLeft, Upload, MapPin, Loader2 } from "lucide-react";
 import { sendNativeMessage } from "../../services/nativeBridge";
 import { apiService } from "../../services/apiService";
 import { DEFAULT_AVATARS, DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
@@ -17,6 +17,8 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
   const [userId, setUserId] = useState<number>(0);
   const [saved, setSaved] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
             email: u.email || u.Email || "",
             phone: u.telefone || u.Telefone || "",
             cpf: u.cpf || u.Cpf || "",
-            location: u.localizacao || u.Localizacao || "Comunidade Carmelita",
+            location: u.localizacao || u.Localizacao || "",
           });
           if (u.fotoUrl || u.FotoUrl) {
             setAvatarUrl(u.fotoUrl || u.FotoUrl);
@@ -116,6 +118,55 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleUseCurrentLocation = () => {
+    setLocationError(null);
+
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setLocationError("Geolocalização não é suportada neste dispositivo.");
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`
+          );
+          if (!res.ok) throw new Error("Falha ao consultar localização.");
+          const data = await res.json();
+
+          const cidade = data.city || data.locality || data.principalSubdivision || "";
+          const estado = data.principalSubdivision || "";
+          const pais = data.countryName || "";
+          const partes = [cidade, estado, pais].filter(Boolean);
+
+          if (partes.length === 0) {
+            setLocationError("Não foi possível identificar sua cidade. Preencha manualmente.");
+            return;
+          }
+
+          handleChange("location", partes.join(", "));
+        } catch (err) {
+          console.warn("Erro ao obter localização:", err);
+          setLocationError("Não foi possível obter sua localização agora. Preencha manualmente.");
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (err) => {
+        setIsLocating(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationError("Permissão de localização negada. Preencha manualmente.");
+        } else {
+          setLocationError("Não foi possível obter sua localização agora. Preencha manualmente.");
+        }
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -401,24 +452,59 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
           {/* Location */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
-              Localização Padrão
+              Localização
             </label>
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => handleChange("location", e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                border: "1px solid rgba(45,58,46,0.12)",
-                borderRadius: 12,
-                background: "#F5EFE3",
-                fontSize: 14,
-                fontFamily: "'DM Sans', sans-serif",
-                boxSizing: "border-box",
-              }}
-              placeholder="Cidade, Estado"
-            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => {
+                  setLocationError(null);
+                  handleChange("location", e.target.value);
+                }}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: "12px 14px",
+                  border: "1px solid rgba(45,58,46,0.12)",
+                  borderRadius: 12,
+                  background: "#F5EFE3",
+                  fontSize: 14,
+                  fontFamily: "'DM Sans', sans-serif",
+                  boxSizing: "border-box",
+                }}
+                placeholder="Cidade, Estado, País (opcional)"
+              />
+              <button
+                type="button"
+                onClick={handleUseCurrentLocation}
+                disabled={isLocating}
+                title="Usar minha localização atual"
+                aria-label="Usar minha localização atual"
+                style={{
+                  flexShrink: 0,
+                  width: 44,
+                  border: "1px solid rgba(45,58,46,0.12)",
+                  borderRadius: 12,
+                  background: "#2D3A2E",
+                  color: "#FDFBF7",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: isLocating ? "default" : "pointer",
+                  opacity: isLocating ? 0.7 : 1,
+                }}
+              >
+                {isLocating ? (
+                  <Loader2 size={17} className="animate-spin" />
+                ) : (
+                  <MapPin size={17} />
+                )}
+              </button>
+            </div>
+            <p style={{ fontSize: 11, color: locationError ? "#C44F35" : "#7A8A7B", marginTop: 6 }}>
+              {locationError || "Deixe em branco ou toque no ícone para preencher com sua localização atual."}
+            </p>
           </div>
         </div>
       </div>

@@ -77,6 +77,23 @@ using (var scope = app.Services.CreateScope())
         UsuarioId INTEGER NOT NULL,
         DataCriacao TEXT NOT NULL
     );");
+    RunMigrationStatement(@"CREATE TABLE IF NOT EXISTS Conquistas (
+        Id INTEGER NOT NULL CONSTRAINT PK_Conquistas PRIMARY KEY AUTOINCREMENT,
+        Titulo TEXT NOT NULL,
+        Descricao TEXT NOT NULL,
+        Icone TEXT NOT NULL,
+        Tipo TEXT NOT NULL,
+        Meta INTEGER NOT NULL,
+        PontosRecompensa INTEGER NOT NULL,
+        Ativo INTEGER NOT NULL,
+        DataCriacao TEXT NOT NULL
+    );");
+    RunMigrationStatement(@"CREATE TABLE IF NOT EXISTS UsuarioConquistas (
+        Id INTEGER NOT NULL CONSTRAINT PK_UsuarioConquistas PRIMARY KEY AUTOINCREMENT,
+        UsuarioId INTEGER NOT NULL,
+        ConquistaId INTEGER NOT NULL,
+        DataConquistada TEXT NOT NULL
+    );");
 
     // O Administrador não compete nem acumula pontos no pódio
     RunMigrationStatement("UPDATE Usuarios SET Pontos = 0 WHERE IsAdmin = 1;");
@@ -169,6 +186,22 @@ using (var scope = app.Services.CreateScope())
                 "— anote agora, ela não será exibida novamente. Para definir uma senha própria, configure DemoUserSeed__Password.",
                 silviaEmail, demoPassword);
         }
+    }
+
+    // 3. Seed das conquistas reais (badges) padrão da comunidade
+    if (!db.Set<LibertApp.Api.Data.Entities.Conquista>().Any())
+    {
+        db.Set<LibertApp.Api.Data.Entities.Conquista>().AddRange(
+            new LibertApp.Api.Data.Entities.Conquista { Titulo = "Primeiro Passo", Descricao = "Publique sua primeira mensagem no mural da comunidade.", Icone = "🌱", Tipo = "posts", Meta = 1, PontosRecompensa = 10, Ativo = true },
+            new LibertApp.Api.Data.Entities.Conquista { Titulo = "Voz Ativa", Descricao = "Compartilhe 10 publicações no mural da comunidade.", Icone = "📣", Tipo = "posts", Meta = 10, PontosRecompensa = 50, Ativo = true },
+            new LibertApp.Api.Data.Entities.Conquista { Titulo = "Foco Consciente", Descricao = "Complete 10 sessões de foco (Pomodoro).", Icone = "🎯", Tipo = "pomodoros", Meta = 10, PontosRecompensa = 60, Ativo = true },
+            new LibertApp.Api.Data.Entities.Conquista { Titulo = "Mestre do Foco", Descricao = "Complete 50 sessões de foco (Pomodoro).", Icone = "🏆", Tipo = "pomodoros", Meta = 50, PontosRecompensa = 200, Ativo = true },
+            new LibertApp.Api.Data.Entities.Conquista { Titulo = "Superando Desafios", Descricao = "Conclua 10 desafios de bem-estar.", Icone = "✅", Tipo = "desafios", Meta = 10, PontosRecompensa = 80, Ativo = true },
+            new LibertApp.Api.Data.Entities.Conquista { Titulo = "Conectado(a)", Descricao = "Conquiste 5 seguidores na comunidade.", Icone = "🤝", Tipo = "seguidores", Meta = 5, PontosRecompensa = 40, Ativo = true },
+            new LibertApp.Api.Data.Entities.Conquista { Titulo = "Comunidade Querida", Descricao = "Conquiste 20 seguidores na comunidade.", Icone = "💚", Tipo = "seguidores", Meta = 20, PontosRecompensa = 150, Ativo = true },
+            new LibertApp.Api.Data.Entities.Conquista { Titulo = "Ponto de Virada", Descricao = "Acumule 1000 pontos de bem-estar.", Icone = "⭐", Tipo = "pontos", Meta = 1000, PontosRecompensa = 0, Ativo = true }
+        );
+        db.SaveChanges();
     }
 }
 

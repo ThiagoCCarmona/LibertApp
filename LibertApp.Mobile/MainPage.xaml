@@ -6,12 +6,18 @@
              Shell.NavBarIsVisible="False">
 
     <Grid>
-        <HybridWebView x:Name="hybridWebView"
-                       HybridRoot="wwwroot"
-                       DefaultFile="index.html"
-                       RawMessageReceived="OnHybridMessageReceived"
-                       HorizontalOptions="Fill"
-                       VerticalOptions="Fill" />
+        <!--
+            Carrega a versao de producao publicada na VPS (em vez do bundle local em
+            Resources/Raw/wwwroot), garantindo que o app sempre reflita o site publicado
+            sem precisar de um novo build/release. A ponte JS<->C# (HybridBridge) e
+            preservada via esquema de URL customizado interceptado em OnNavigating.
+        -->
+        <WebView x:Name="webView"
+                 Source="https://libertapp.tccodes.com.br"
+                 Navigating="OnNavigating"
+                 Navigated="OnNavigated"
+                 HorizontalOptions="Fill"
+                 VerticalOptions="Fill" />
     </Grid>
 
 </ContentPage>

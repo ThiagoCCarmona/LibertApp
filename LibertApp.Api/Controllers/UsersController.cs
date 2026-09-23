@@ -107,6 +107,62 @@ public class UsersController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Relatório de bem-estar real, calculado a partir dos dados efetivamente registrados
+    /// pelo usuário no app (sessões de foco, desafios concluídos, publicações), em vez de
+    /// valores fixos/mockados.
+    /// </summary>
+    [HttpGet("{id}/wellness-summary")]
+    public async Task<IActionResult> GetWellnessSummary(int id)
+    {
+        var user = await _context.Usuarios.FindAsync(id);
+        if (user == null) return NotFound(new { message = "Usuário não encontrado." });
+
+        var agora = DateTime.UtcNow;
+        var seteDiasAtras = agora.AddDays(-7);
+
+        var sessoesSemana = await _context.SessoesPomodoro
+            .Where(s => s.UsuarioId == id && s.DataHora >= seteDiasAtras)
+            .ToListAsync();
+        var pomodoroMinutosSemana = sessoesSemana.Where(s => s.Tipo == "focus").Sum(s => s.DuracaoMinutos);
+
+        var postsSemana = await _context.FeedPosts.CountAsync(p => p.UsuarioId == id && p.DataPublicacao >= seteDiasAtras);
+        var desafiosSemana = await _context.UsuariosDesafios
+            .CountAsync(ud => ud.UsuarioId == id && ud.Concluido && ud.DataConclusao >= seteDiasAtras);
+        var atividadesSemana = postsSemana + desafiosSemana;
+
+        // Sequência real: dias consecutivos (terminando hoje) com pelo menos 1 sessão de foco
+        // ou 1 desafio concluído.
+        var diasComAtividade = new HashSet<DateOnly>();
+        foreach (var s in await _context.SessoesPomodoro.Where(s => s.UsuarioId == id).Select(s => s.DataHora).ToListAsync())
+            diasComAtividade.Add(DateOnly.FromDateTime(s));
+        foreach (var d in await _context.UsuariosDesafios.Where(ud => ud.UsuarioId == id && ud.Concluido).Select(ud => ud.DataConclusao).ToListAsync())
+            diasComAtividade.Add(DateOnly.FromDateTime(d));
+
+        int sequenciaDias = 0;
+        var cursor = DateOnly.FromDateTime(agora);
+        while (diasComAtividade.Contains(cursor))
+        {
+            sequenciaDias++;
+            cursor = cursor.AddDays(-1);
+        }
+
+        // Pontuação de bem-estar: média de 3 indicadores normalizados em 0-100
+        // (meta semanal de 210 min de foco, sequência de 7 dias, 14 atividades/semana).
+        double focoScore = Math.Min(100, pomodoroMinutosSemana / 210.0 * 100);
+        double sequenciaScore = Math.Min(100, sequenciaDias / 7.0 * 100);
+        double atividadeScore = Math.Min(100, atividadesSemana / 14.0 * 100);
+        int bemEstarScore = (int)Math.Round((focoScore + sequenciaScore + atividadeScore) / 3.0);
+
+        return Ok(new
+        {
+            pomodoroMinutosSemana,
+            atividadesSemana,
+            sequenciaDias,
+            bemEstarScore
+        });
+    }
+
     [HttpPost("{id}/follow")]
     public async Task<IActionResult> ToggleFollow(int id, [FromBody] FollowRequest request)
     {
