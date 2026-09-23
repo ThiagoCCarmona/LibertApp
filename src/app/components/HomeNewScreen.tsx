@@ -229,15 +229,17 @@ export function HomeNewScreen({
   };
 
   const handleOpenUserProfile = (author: string, avatar: string, postObj?: any) => {
+    const pts = postObj?.pontos ?? postObj?.points ?? 0;
+    const lvl = Math.max(1, Math.floor(pts / 600) + 1);
     setSelectedUser({
       id: postObj?.usuarioId,
       name: author,
       avatar: avatar,
-      level: 3,
-      levelName: "Nível 3 - Foco Consciente",
-      points: 2450,
-      streakDays: 7,
-      focusMinutes: 180,
+      level: lvl,
+      levelName: `Nível ${lvl} - Foco Ativo`,
+      points: pts,
+      streakDays: Math.min(14, Math.max(1, Math.floor(pts / 200))),
+      focusMinutes: Math.max(30, Math.floor(pts * 0.15)),
       bio: postObj?.curso ? `Estudante de ${postObj.curso}` : "Participante da Comunidade Carmelita",
       department: postObj?.curso || "Comunidade Carmelita",
       isFollowing: false,

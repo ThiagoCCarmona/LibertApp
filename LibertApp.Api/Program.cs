@@ -132,43 +132,38 @@ using (var scope = app.Services.CreateScope())
         if (changed) db.SaveChanges();
     }
 
-    // 2. Seed da usuária de demonstração Silvia Mendes (perfil de exemplo para o ranking/feed)
-    var silviaEmail = "silvia.mendes@email.com";
-    if (!db.Usuarios.Any(u => u.Email.ToLower() == silviaEmail))
+    // 2. Remoção garantida de qualquer usuário simulado/mockado (ex.: Silvia Mendes)
+    try
     {
-        var demoPassword = builder.Configuration["DemoUserSeed:Password"];
-        var generatedDemoPassword = string.IsNullOrWhiteSpace(demoPassword);
-        if (generatedDemoPassword)
+        var mockUsers = db.Usuarios.Where(u => u.Email.ToLower() == "silvia.mendes@email.com").ToList();
+        if (mockUsers.Count > 0)
         {
-            demoPassword = PasswordHasher.GenerateRandomPassword();
-        }
+            foreach (var mockUser in mockUsers)
+            {
+                var posts = db.FeedPosts.Where(p => p.UsuarioId == mockUser.Id);
+                db.FeedPosts.RemoveRange(posts);
+                var comments = db.PostComentarios.Where(c => c.UsuarioId == mockUser.Id);
+                db.PostComentarios.RemoveRange(comments);
+                var likes = db.PostLikes.Where(l => l.UsuarioId == mockUser.Id);
+                db.PostLikes.RemoveRange(likes);
+                var cLikes = db.CommentLikes.Where(l => l.UsuarioId == mockUser.Id);
+                db.CommentLikes.RemoveRange(cLikes);
+                var follows = db.UsuarioSeguidores.Where(s => s.SeguidorId == mockUser.Id || s.SeguidoId == mockUser.Id);
+                db.UsuarioSeguidores.RemoveRange(follows);
+                var desafios = db.UsuariosDesafios.Where(d => d.UsuarioId == mockUser.Id);
+                db.UsuariosDesafios.RemoveRange(desafios);
+                var pomodoros = db.SessoesPomodoro.Where(p => p.UsuarioId == mockUser.Id);
+                db.SessoesPomodoro.RemoveRange(pomodoros);
 
-        db.Usuarios.Add(new LibertApp.Api.Data.Entities.Usuario
-        {
-            Nome = "Silvia Mendes",
-            Email = silviaEmail,
-            SenhaHash = PasswordHasher.Hash(demoPassword!),
-            Telefone = "(11) 98765-4321",
-            CPF = "123.456.789-00",
-            Curso = "Psicologia • 4º Semestre",
-            Bio = "Buscando reconexão com o presente e momentos de foco.",
-            Localizacao = "Comunidade Carmelita",
-            NumeroCarteira = "LBT-0001-2024",
-            FotoUrl = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-            Pontos = 2450,
-            Nivel = 3,
-            IsAdmin = false,
-            DataCriacao = DateTime.UtcNow
-        });
-        db.SaveChanges();
-
-        if (generatedDemoPassword)
-        {
-            logger.LogWarning(
-                "Conta de demonstração criada: {Email} / senha gerada automaticamente: {Password} " +
-                "— anote agora, ela não será exibida novamente. Para definir uma senha própria, configure DemoUserSeed__Password.",
-                silviaEmail, demoPassword);
+                db.Usuarios.Remove(mockUser);
+            }
+            db.SaveChanges();
+            logger.LogInformation("Usuário simulado de demonstração removido com sucesso.");
         }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Erro ao limpar usuário simulado de demonstração.");
     }
 }
 

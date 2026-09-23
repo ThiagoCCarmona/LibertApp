@@ -36,7 +36,15 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
       try {
         const local = await sendNativeMessage<any[]>("GET_RANKING");
         if (isMounted && local && Array.isArray(local) && local.length > 0) {
-          const filtered = local.filter((u) => !u.isAdmin && !u.IsAdmin && (u.points ?? u.pontos ?? u.Pontos ?? 0) > 0);
+          const filtered = local.filter(
+            (u) =>
+              !u.isAdmin &&
+              !u.IsAdmin &&
+              (u.points ?? u.pontos ?? u.Pontos ?? 0) > 0 &&
+              u.email?.toLowerCase() !== "silvia.mendes@email.com" &&
+              u.name?.toLowerCase() !== "silvia mendes" &&
+              u.nome?.toLowerCase() !== "silvia mendes"
+          );
           const mapped: RankingUser[] = filtered.map((u, index) => ({
             id: u.id ?? u.Id,
             position: index + 1,
@@ -55,7 +63,15 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
       try {
         const apiRank = await apiService.getLeaderboard();
         if (isMounted && apiRank && Array.isArray(apiRank)) {
-          const filtered = apiRank.filter((u: any) => !u.isAdmin && !u.IsAdmin);
+          const filtered = apiRank.filter(
+            (u: any) =>
+              !u.isAdmin &&
+              !u.IsAdmin &&
+              (u.points ?? u.pontos ?? u.Pontos ?? 0) > 0 &&
+              u.email?.toLowerCase() !== "silvia.mendes@email.com" &&
+              u.name?.toLowerCase() !== "silvia mendes" &&
+              u.nome?.toLowerCase() !== "silvia mendes"
+          );
           const mapped: RankingUser[] = filtered.map((u: any, index: number) => ({
             id: u.id ?? u.Id,
             position: index + 1,

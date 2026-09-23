@@ -19,7 +19,7 @@ public class LeaderboardController : ControllerBase
     public async Task<IActionResult> GetRanking()
     {
         var users = await _context.Usuarios
-            .Where(u => !u.IsAdmin && u.Ativo)
+            .Where(u => !u.IsAdmin && u.Ativo && u.Pontos > 0 && u.Email.ToLower() != "silvia.mendes@email.com")
             .OrderByDescending(u => u.Pontos)
             .Take(25)
             .ToListAsync();
