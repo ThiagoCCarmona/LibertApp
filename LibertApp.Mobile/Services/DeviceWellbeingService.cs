@@ -153,9 +153,21 @@ public class DeviceWellbeingService : IDeviceWellbeingService
         {
             var context = global::Android.App.Application.Context;
             var notificationManager = (global::Android.App.NotificationManager)context.GetSystemService(global::Android.Content.Context.NotificationService)!;
-            notificationManager.SetInterruptionFilter(enabled
-                ? global::Android.App.InterruptionFilter.Alarms
-                : global::Android.App.InterruptionFilter.All);
+            if (enabled)
+            {
+                try
+                {
+                    notificationManager.SetInterruptionFilter(global::Android.App.InterruptionFilter.Priority);
+                }
+                catch
+                {
+                    notificationManager.SetInterruptionFilter(global::Android.App.InterruptionFilter.Alarms);
+                }
+            }
+            else
+            {
+                notificationManager.SetInterruptionFilter(global::Android.App.InterruptionFilter.All);
+            }
             return true;
         }
         catch

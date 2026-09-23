@@ -37,21 +37,31 @@ function isWithinNightMode(): boolean {
   return nowMinutes >= startMinutes || nowMinutes < endMinutes;
 }
 
-function notify(title: string, message: string) {
+export function notify(titleOrObj: string | { title: string; message: string }, message?: string) {
+  let title = "";
+  let msg = "";
+  if (typeof titleOrObj === "object" && titleOrObj !== null) {
+    title = titleOrObj.title;
+    msg = titleOrObj.message;
+  } else {
+    title = titleOrObj;
+    msg = message || "";
+  }
+
   if (typeof window !== "undefined") {
     window.dispatchEvent(
       new CustomEvent("libertapp_inapp_notification", {
-        detail: { title, message },
+        detail: { title, message: msg },
       })
     );
   }
 
   if (isMauiHybrid()) {
-    sendNativeMessage("SHOW_LOCAL_NOTIFICATION", { title, message }).catch(() => {});
+    sendNativeMessage("SHOW_LOCAL_NOTIFICATION", { title, message: msg }).catch(() => {});
   } else {
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
       try {
-        new Notification(title, { body: message });
+        new Notification(title, { body: msg });
       } catch {}
     }
   }

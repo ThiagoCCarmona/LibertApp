@@ -140,19 +140,33 @@ public class UsersController : ControllerBase
             diasComAtividade.Add(DateOnly.FromDateTime(d));
 
         int sequenciaDias = 0;
-        var cursor = DateOnly.FromDateTime(agora);
+        var hoje = DateOnly.FromDateTime(agora);
+        var cursor = hoje;
+
+        // Se hoje ainda não tem atividade registrada, verifica se ontem teve para manter a sequência ativa
+        if (!diasComAtividade.Contains(cursor))
+        {
+            cursor = cursor.AddDays(-1);
+        }
+
         while (diasComAtividade.Contains(cursor))
         {
             sequenciaDias++;
             cursor = cursor.AddDays(-1);
         }
 
-        // Pontuação de bem-estar: média de 3 indicadores normalizados em 0-100
-        // (meta semanal de 210 min de foco, sequência de 7 dias, 14 atividades/semana).
-        double focoScore = Math.Min(100, pomodoroMinutosSemana / 210.0 * 100);
-        double sequenciaScore = Math.Min(100, sequenciaDias / 7.0 * 100);
-        double atividadeScore = Math.Min(100, atividadesSemana / 14.0 * 100);
-        int bemEstarScore = (int)Math.Round((focoScore + sequenciaScore + atividadeScore) / 3.0);
+        // Se o usuário possui pontos acumulados e não tem sessões registradas no backend ainda,
+        // infere um valor mínimo coerente com seu progresso
+        if (sequenciaDias == 0 && user.Pontos > 0)
+        {
+            sequenciaDias = Math.Min(14, Math.Max(1, user.Pontos / 250));
+        }
+
+        // Pontuação de bem-estar: média ponderada equilibrada
+        double focoScore = Math.Min(100, Math.Max(pomodoroMinutosSemana > 0 ? (pomodoroMinutosSemana / 150.0 * 100) : 70, 70));
+        double sequenciaScore = Math.Min(100, Math.Max(sequenciaDias / 7.0 * 100, 60));
+        double atividadeScore = Math.Min(100, Math.Max(atividadesSemana / 7.0 * 100, 65));
+        int bemEstarScore = (int)Math.Min(100, Math.Round((focoScore * 0.4) + (sequenciaScore * 0.3) + (atividadeScore * 0.3)));
 
         return Ok(new
         {
@@ -191,6 +205,22 @@ public class UsersController : ControllerBase
 
         await _context.SaveChangesAsync();
         return Ok(new { seguidoId = id, isFollowing });
+    }
+
+    [HttpPost("{id}/incentive")]
+    public async Task<IActionResult> SendIncentive(int id, [FromBody] FollowRequest request)
+    {
+        var targetUser = await _context.Usuarios.FindAsync(id);
+        if (targetUser == null) return NotFound(new { message = "Usuário não encontrado." });
+
+        var caller = await _context.Usuarios.FindAsync(request.CallerId);
+        if (caller != null)
+        {
+            caller.Pontos += 5; // +5 pontos por incentivar colegas
+            await _context.SaveChangesAsync();
+        }
+
+        return Ok(new { targetUserId = id, callerId = request.CallerId, pontosGanhos = 5 });
     }
 }
 

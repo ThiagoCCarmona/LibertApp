@@ -113,9 +113,20 @@ async function handleWebFallback<T = any>(action: string, payload?: any): Promis
         telefone: parsedPayload.telefone || user.telefone,
         cpf: parsedPayload.cpf || user.cpf,
         localizacao: parsedPayload.localizacao || user.localizacao,
+        fotoUrl: parsedPayload.fotoUrl || user.fotoUrl,
       };
       localStorage.setItem("currentUser", JSON.stringify(updated));
       return updated as T;
+    }
+
+    case "SEND_INCENTIVE": {
+      const currentJson = localStorage.getItem("currentUser");
+      if (currentJson) {
+        const u = JSON.parse(currentJson);
+        u.pontos = (u.pontos || 0) + 5;
+        localStorage.setItem("currentUser", JSON.stringify(u));
+      }
+      return { targetUserId: parsedPayload?.targetUserId, pontosGanhos: 5 } as T;
     }
 
     case "GET_RANKING": {
@@ -575,6 +586,14 @@ export async function pickNativeImage(fromCamera: boolean = false): Promise<{ da
     const action = fromCamera ? "CAPTURE_PHOTO" : "PICK_IMAGE";
     const res = await sendNativeMessage<{ dataUrl: string; fileName: string }>(action);
     return res || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function sendNativeIncentive(targetUserId: number): Promise<any> {
+  try {
+    return await sendNativeMessage("SEND_INCENTIVE", { targetUserId });
   } catch {
     return null;
   }

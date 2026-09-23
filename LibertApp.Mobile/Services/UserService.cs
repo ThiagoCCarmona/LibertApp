@@ -72,7 +72,7 @@ public class UserService : IUserService
         return newUser;
     }
 
-    public async Task<Usuario> UpdateProfileAsync(string nome, string email, string telefone, string cpf, string localizacao)
+    public async Task<Usuario> UpdateProfileAsync(string nome, string email, string telefone, string cpf, string localizacao, string? fotoUrl = null)
     {
         var user = await GetCurrentUserAsync();
         if (user == null)
@@ -86,6 +86,10 @@ public class UserService : IUserService
         user.Telefone = telefone;
         user.CPF = cpf;
         user.Localizacao = localizacao;
+        if (!string.IsNullOrWhiteSpace(fotoUrl))
+        {
+            user.FotoUrl = fotoUrl;
+        }
 
         await _context.SaveChangesAsync();
         return user;

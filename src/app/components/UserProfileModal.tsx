@@ -3,6 +3,8 @@ import { X, Trophy, Flame, Clock, Award, ThumbsUp, Check, UserPlus, UserCheck, M
 import { UnfollowConfirmModal } from "./UnfollowConfirmModal";
 import { apiService } from "../../services/apiService";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
+import { notify } from "../../services/notificationScheduler";
+import { sendNativeMessage, sendNativeIncentive } from "../../services/nativeBridge";
 
 export interface UserProfileData {
   id?: number;
@@ -24,6 +26,28 @@ export interface UserProfileData {
   }[];
 }
 
+const INCENTIVE_STORAGE_KEY = "libertapp_incentives_sent";
+const MAX_INCENTIVES_PER_HOUR = 3;
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+function getRecentIncentives(): number[] {
+  try {
+    const raw = localStorage.getItem(INCENTIVE_STORAGE_KEY);
+    const list: number[] = raw ? JSON.parse(raw) : [];
+    const now = Date.now();
+    return list.filter((t) => now - t < ONE_HOUR_MS);
+  } catch {
+    return [];
+  }
+}
+
+function recordIncentive(): number[] {
+  const recent = getRecentIncentives();
+  recent.push(Date.now());
+  localStorage.setItem(INCENTIVE_STORAGE_KEY, JSON.stringify(recent));
+  return recent;
+}
+
 interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -38,6 +62,9 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
   const [userPosts, setUserPosts] = useState<any[]>(user?.posts || []);
   const [profileDetails, setProfileDetails] = useState<UserProfileData | null>(user);
   const [loadingPosts, setLoadingPosts] = useState(false);
+  const [recentIncentives, setRecentIncentives] = useState<number[]>(getRecentIncentives);
+
+  const remainingIncentives = Math.max(0, MAX_INCENTIVES_PER_HOUR - recentIncentives.length);
 
   useEffect(() => {
     if (!isOpen || !user) return;
@@ -99,7 +126,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
 
   if (!isOpen || !user) return null;
 
-  const handleToggleFollow = () => {
+  const handleToggleFollow = async () => {
     if (following) {
       // Solicita confirmação antes de deixar de seguir
       setShowUnfollowConfirm(true);
@@ -109,19 +136,96 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
       if (onToggleFollow && user.id) {
         onToggleFollow(user.id, true);
       }
+      const callerId = (() => {
+        try {
+          const s = localStorage.getItem("currentUser");
+          return s ? JSON.parse(s)?.id || 1 : 1;
+        } catch { return 1; }
+      })();
+      if (user.id) {
+        try {
+          await apiService.toggleFollow(user.id, callerId);
+        } catch {
+          try {
+            await sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: user.id });
+          } catch {}
+        }
+      }
+      notify({
+        title: "Nova Conexão 🌱",
+        message: `Você começou a seguir ${user.name}!`,
+      });
     }
   };
 
-  const handleConfirmUnfollow = () => {
+  const handleConfirmUnfollow = async () => {
     setFollowing(false);
+    setShowUnfollowConfirm(false);
     if (onToggleFollow && user.id) {
       onToggleFollow(user.id, false);
     }
+    const callerId = (() => {
+      try {
+        const s = localStorage.getItem("currentUser");
+        return s ? JSON.parse(s)?.id || 1 : 1;
+      } catch { return 1; }
+    })();
+    if (user.id) {
+      try {
+        await apiService.toggleFollow(user.id, callerId);
+      } catch {
+        try {
+          await sendNativeMessage("TOGGLE_FOLLOW", { seguidoId: user.id });
+        } catch {}
+      }
+    }
+    notify({
+      title: "Conexão Atualizada",
+      message: `Você deixou de seguir ${user.name}.`,
+    });
   };
 
-  const handleSendIncentive = () => {
+  const handleSendIncentive = async () => {
+    const freshRecent = getRecentIncentives();
+    if (freshRecent.length >= MAX_INCENTIVES_PER_HOUR) {
+      const oldest = Math.min(...freshRecent);
+      const minutesToWait = Math.max(1, Math.ceil((ONE_HOUR_MS - (Date.now() - oldest)) / 60000));
+      notify({
+        title: "Limite de Incentivos Atingido",
+        message: `Você já enviou ${MAX_INCENTIVES_PER_HOUR} incentivos nesta hora. Aguarde ${minutesToWait} min para enviar novamente.`,
+      });
+      return;
+    }
+
+    const updated = recordIncentive();
+    setRecentIncentives(updated);
+    const newRemaining = Math.max(0, MAX_INCENTIVES_PER_HOUR - updated.length);
+
     setIncentiveSent(true);
-    setTimeout(() => setIncentiveSent(false), 3000);
+
+    const callerId = (() => {
+      try {
+        const s = localStorage.getItem("currentUser");
+        return s ? JSON.parse(s)?.id || 1 : 1;
+      } catch { return 1; }
+    })();
+
+    if (user.id) {
+      try {
+        await apiService.sendIncentive(user.id, callerId);
+      } catch {
+        try {
+          await sendNativeIncentive(user.id);
+        } catch {}
+      }
+    }
+
+    notify({
+      title: "Incentivo Enviado! 🎉",
+      message: `Você enviou um incentivo de presença para ${user.name}! (+5 pontos) • Restam ${newRemaining} nesta hora.`,
+    });
+
+    setTimeout(() => setIncentiveSent(false), 3500);
   };
 
   const defaultAchievements = [
@@ -435,15 +539,16 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
 
           <button
             onClick={handleSendIncentive}
+            disabled={remainingIncentives === 0 && !incentiveSent}
             style={{
-              background: incentiveSent ? "#3E5C43" : "#F5EFE3",
-              color: incentiveSent ? "#FDFBF7" : "#2D3A2E",
+              background: incentiveSent ? "#3E5C43" : remainingIncentives === 0 ? "#EDE7DA" : "#F5EFE3",
+              color: incentiveSent ? "#FDFBF7" : remainingIncentives === 0 ? "#7A8A7B" : "#2D3A2E",
               border: "1px solid rgba(45, 58, 46, 0.08)",
               borderRadius: 14,
               padding: "12px",
               fontSize: 13,
               fontWeight: 600,
-              cursor: "pointer",
+              cursor: remainingIncentives === 0 && !incentiveSent ? "not-allowed" : "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -455,9 +560,13 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
               <>
                 <Check size={16} /> Incentivo enviado! 🎉
               </>
+            ) : remainingIncentives === 0 ? (
+              <>
+                <Clock size={16} color="#7A8A7B" /> Limite atingido (0/3 na hora)
+              </>
             ) : (
               <>
-                <ThumbsUp size={16} color="#D68C70" /> Incentivar Colega
+                <ThumbsUp size={16} color="#D68C70" /> Incentivar Colega ({remainingIncentives}/3)
               </>
             )}
           </button>

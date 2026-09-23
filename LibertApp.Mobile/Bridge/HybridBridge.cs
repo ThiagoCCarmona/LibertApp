@@ -82,6 +82,7 @@ public class HybridBridge
                 "GET_RANKING" => await _userService.GetRankingAsync(),
                 "SEARCH_USERS" => await HandleSearchUsers(message.Payload),
                 "TOGGLE_FOLLOW" => await HandleToggleFollow(message.Payload),
+                "SEND_INCENTIVE" => await HandleSendIncentive(message.Payload),
                 "UPDATE_PROFILE" => await HandleUpdateProfile(message.Payload),
                 "SHOW_LOCAL_NOTIFICATION" => await HandleShowLocalNotification(message.Payload),
                 "CHECK_NOTIFICATION_PERMISSION" => await HandleCheckNotificationPermission(),
@@ -197,6 +198,19 @@ public class HybridBridge
         return new { SeguidoId = seguidoId, IsFollowing = isFollowing };
     }
 
+    private async Task<object?> HandleSendIncentive(string? payload)
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+        int targetUserId = doc.TryGetProperty("targetUserId", out var t) ? t.GetInt32() : 0;
+        var caller = await _userService.GetCurrentUserAsync();
+        if (caller != null)
+        {
+            caller.Pontos += 5;
+            await _userService.UpdateProfileAsync(caller.Nome, caller.Email, caller.Telefone, caller.CPF, caller.Localizacao, caller.FotoUrl);
+        }
+        return new { targetUserId, pontosGanhos = 5 };
+    }
+
     private async Task<object?> HandleToggleDesafio(string? payload)
     {
         if (int.TryParse(payload, out int desafioId))
@@ -250,20 +264,32 @@ public class HybridBridge
     private async Task<object?> HandleUpdateProfile(string? payload)
     {
         var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
-        string nome = doc.GetProperty("nome").GetString() ?? "";
-        string email = doc.GetProperty("email").GetString() ?? "";
-        string tel = doc.GetProperty("telefone").GetString() ?? "";
-        string cpf = doc.GetProperty("cpf").GetString() ?? "";
-        string loc = doc.GetProperty("localizacao").GetString() ?? "";
+        string nome = doc.TryGetProperty("nome", out var n) ? n.GetString() ?? "" : "";
+        string email = doc.TryGetProperty("email", out var em) ? em.GetString() ?? "" : "";
+        string tel = doc.TryGetProperty("telefone", out var tl) ? tl.GetString() ?? "" : "";
+        string cpf = doc.TryGetProperty("cpf", out var cp) ? cp.GetString() ?? "" : "";
+        string loc = doc.TryGetProperty("localizacao", out var lc) ? lc.GetString() ?? "" : "";
+        string? fotoUrl = doc.TryGetProperty("fotoUrl", out var f) ? f.GetString() : null;
 
-        return await _userService.UpdateProfileAsync(nome, email, tel, cpf, loc);
+        return await _userService.UpdateProfileAsync(nome, email, tel, cpf, loc, fotoUrl);
     }
 
     private async Task<object?> HandleCheckNotificationPermission()
     {
 #if ANDROID
-        var status = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.PostNotifications>();
-        return new { granted = status == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted };
+        bool granted;
+        if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.Tiramisu)
+        {
+            var status = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.PostNotifications>();
+            granted = status == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted;
+        }
+        else
+        {
+            var context = global::Android.App.Application.Context;
+            var compat = AndroidX.Core.App.NotificationManagerCompat.From(context);
+            granted = compat.AreNotificationsEnabled();
+        }
+        return new { granted };
 #elif IOS
         var center = UserNotifications.UNUserNotificationCenter.Current;
         var settings = await center.GetNotificationSettingsAsync();
@@ -277,12 +303,23 @@ public class HybridBridge
     private async Task<object?> HandleRequestNotificationPermission()
     {
 #if ANDROID
-        var status = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.PostNotifications>();
-        if (status != Microsoft.Maui.ApplicationModel.PermissionStatus.Granted)
+        bool granted;
+        if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.Tiramisu)
         {
-            status = await Microsoft.Maui.ApplicationModel.Permissions.RequestAsync<Microsoft.Maui.ApplicationModel.Permissions.PostNotifications>();
+            var status = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.PostNotifications>();
+            if (status != Microsoft.Maui.ApplicationModel.PermissionStatus.Granted)
+            {
+                status = await Microsoft.Maui.ApplicationModel.Permissions.RequestAsync<Microsoft.Maui.ApplicationModel.Permissions.PostNotifications>();
+            }
+            granted = status == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted;
         }
-        return new { granted = status == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted };
+        else
+        {
+            var context = global::Android.App.Application.Context;
+            var compat = AndroidX.Core.App.NotificationManagerCompat.From(context);
+            granted = compat.AreNotificationsEnabled();
+        }
+        return new { granted };
 #elif IOS
         var center = UserNotifications.UNUserNotificationCenter.Current;
         var settings = await center.RequestAuthorizationAsync(
@@ -345,8 +382,16 @@ public class HybridBridge
 
     private async Task<object?> HandleCheckMediaPermission()
     {
-        var status = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.Media>();
+#if ANDROID
+        var photosStatus = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.Photos>();
+        var camStatus = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.Camera>();
+        bool granted = photosStatus == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted ||
+                       camStatus == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted;
+        return new { granted };
+#else
+        var status = await Microsoft.Maui.ApplicationModel.Permissions.CheckStatusAsync<Microsoft.Maui.ApplicationModel.Permissions.Photos>();
         return new { granted = status == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted };
+#endif
     }
 
     private async Task<object?> HandleRequestMediaPermission(string? payload)
@@ -361,8 +406,8 @@ public class HybridBridge
         }
         else
         {
-            var mediaStatus = await Microsoft.Maui.ApplicationModel.Permissions.RequestAsync<Microsoft.Maui.ApplicationModel.Permissions.Media>();
-            return new { granted = mediaStatus == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted };
+            var photosStatus = await Microsoft.Maui.ApplicationModel.Permissions.RequestAsync<Microsoft.Maui.ApplicationModel.Permissions.Photos>();
+            return new { granted = photosStatus == Microsoft.Maui.ApplicationModel.PermissionStatus.Granted };
         }
     }
 

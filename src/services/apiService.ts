@@ -322,6 +322,13 @@ export const apiService = {
     });
   },
 
+  async sendIncentive(targetUserId: number, callerId: number): Promise<{ targetUserId: number; callerId: number; pontosGanhos: number }> {
+    return request<{ targetUserId: number; callerId: number; pontosGanhos: number }>(`/api/users/${targetUserId}/incentive`, {
+      method: "POST",
+      body: JSON.stringify({ callerId }),
+    });
+  },
+
   // Gamificação & Pomodoro
   async recordPomodoro(usuarioId: number, tipo: string, minutos: number): Promise<any> {
     return request<any>("/api/pomodoro/session", {

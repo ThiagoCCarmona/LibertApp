@@ -420,6 +420,11 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
         isOpen={selectedUser !== null}
         onClose={() => setSelectedUser(null)}
         user={selectedUser}
+        onToggleFollow={(userId, nextState) => {
+          setUsers((prev) =>
+            prev.map((u) => (u.id === userId ? { ...u, isFollowing: nextState } : u))
+          );
+        }}
       />
     </div>
   );

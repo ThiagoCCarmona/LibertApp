@@ -490,6 +490,8 @@ export function HomeNewScreen({
           ) : (
             posts.map((post) => {
               const isOwner = currentUser?.id && post.usuarioId === currentUser.id;
+              const postAuthor = (isOwner && currentUser?.nome) ? currentUser.nome : post.author;
+              const postAvatar = (isOwner && currentUser?.fotoUrl) ? currentUser.fotoUrl : (post.avatar || DEFAULT_AVATAR_URL);
               return (
                 <div
                   key={post.id}
@@ -502,7 +504,7 @@ export function HomeNewScreen({
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                     <div
-                      onClick={() => handleOpenUserProfile(post.author, post.avatar, post)}
+                      onClick={() => handleOpenUserProfile(postAuthor, postAvatar, post)}
                       style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flex: 1 }}
                     >
                       <div
@@ -516,15 +518,15 @@ export function HomeNewScreen({
                         }}
                       >
                         <img
-                          src={post.avatar}
-                          alt={post.author}
+                          src={postAvatar}
+                          alt={postAuthor}
                           style={{ width: "100%", height: "100%", objectFit: "cover" }}
                         />
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>
-                            {post.icon || "🌱"} {post.author}
+                            {post.icon || "🌱"} {postAuthor}
                           </p>
                           {post.seguindo && (
                             <span
@@ -771,6 +773,11 @@ export function HomeNewScreen({
         isOpen={selectedUser !== null}
         onClose={() => setSelectedUser(null)}
         user={selectedUser}
+        onToggleFollow={(userId, nextState) => {
+          setPosts((prev) =>
+            prev.map((p) => (p.usuarioId === userId ? { ...p, seguindo: nextState } : p))
+          );
+        }}
       />
     </div>
   );

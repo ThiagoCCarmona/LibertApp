@@ -40,8 +40,8 @@ public class FeedService : IFeedService
             {
                 id = p.Id,
                 type = p.TipoPost,
-                author = !string.IsNullOrEmpty(p.Autor) ? p.Autor : (user?.Nome ?? "Membro da Comunidade"),
-                avatar = !string.IsNullOrEmpty(p.AvatarUrl) ? p.AvatarUrl : (user?.FotoUrl ?? "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop"),
+                author = (user != null && !string.IsNullOrWhiteSpace(user.Nome)) ? user.Nome : (!string.IsNullOrEmpty(p.Autor) ? p.Autor : "Membro da Comunidade"),
+                avatar = (user != null && !string.IsNullOrWhiteSpace(user.FotoUrl)) ? user.FotoUrl : (!string.IsNullOrEmpty(p.AvatarUrl) ? p.AvatarUrl : "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop"),
                 time = GetRelativeTime(p.DataPublicacao),
                 content = p.Conteudo,
                 image = p.ImagemUrl,

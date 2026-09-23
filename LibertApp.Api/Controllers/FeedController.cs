@@ -45,20 +45,30 @@ public class FeedController : ControllerBase
             ? await _context.PostLikes.Where(l => l.UsuarioId == callerId.Value).Select(l => l.PostId).ToListAsync()
             : new List<int>();
 
+        var userIds = posts.Select(p => p.UsuarioId).Distinct().ToList();
+        var usersMap = await _context.Usuarios
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id);
+
         var result = new List<object>();
         foreach (var p in posts)
         {
             var commentCount = await _context.PostComentarios.CountAsync(c => c.PostId == p.Id);
             var likesCount = await _context.PostLikes.CountAsync(l => l.PostId == p.Id);
 
+            usersMap.TryGetValue(p.UsuarioId, out var postUser);
+            string authorName = postUser != null && !string.IsNullOrWhiteSpace(postUser.Nome) ? postUser.Nome : p.Autor;
+            string authorAvatar = postUser != null && !string.IsNullOrWhiteSpace(postUser.FotoUrl) ? postUser.FotoUrl : p.AvatarUrl;
+            string authorCurso = postUser != null && !string.IsNullOrWhiteSpace(postUser.Curso) ? postUser.Curso : p.Curso;
+
             result.Add(new
             {
                 seguindo = callerId.HasValue && p.UsuarioId != callerId.Value && followedIds.Contains(p.UsuarioId),
                 id = p.Id,
                 usuarioId = p.UsuarioId,
-                author = p.Autor,
-                avatar = p.AvatarUrl,
-                curso = p.Curso,
+                author = authorName,
+                avatar = authorAvatar,
+                curso = authorCurso,
                 type = p.TipoPost,
                 content = p.Conteudo,
                 image = p.ImagemUrl,
