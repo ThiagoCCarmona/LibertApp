@@ -178,6 +178,10 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("Usuário simulado de demonstração removido com sucesso.");
         }
     }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Erro ao limpar usuário simulado de demonstração.");
+    }
 
     // 3. Seed das conquistas reais (badges) padrão da comunidade
     if (!db.Set<LibertApp.Api.Data.Entities.Conquista>().Any())
