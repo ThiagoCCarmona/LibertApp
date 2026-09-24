@@ -3,6 +3,7 @@ import { ChevronLeft, Trophy, Sparkles } from "lucide-react";
 import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
 import { sendNativeMessage } from "../../services/nativeBridge";
 import { apiService } from "../../services/apiService";
+import { useTranslation } from "../../i18n";
 
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 
@@ -16,6 +17,7 @@ export interface RankingUser {
 }
 
 export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation();
   const [ranking, setRanking] = useState<RankingUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -132,12 +134,12 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
               alignItems: "center",
               justifyContent: "center",
             }}
-            aria-label="Voltar"
+            aria-label={t("profile_refresh")}
           >
             <ChevronLeft size={24} color="#2D3A2E" />
           </button>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", margin: 0 }}>
-            🏆 Pódio da Feira
+            {t("leaderboard_title")}
           </h1>
         </div>
 
@@ -153,7 +155,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
                 fontSize: 12,
               }}
             >
-              Mostrando um ranking salvo neste dispositivo — não foi possível confirmar com o servidor central.
+              {t("leaderboard_cached_notice")}
             </div>
           </div>
         )}
@@ -162,7 +164,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
         {isLoading ? (
           <div style={{ textAlign: "center", padding: "60px 20px" }}>
             <div style={{ fontSize: 28, marginBottom: 12 }}>⏳</div>
-            <p style={{ fontSize: 14, color: "#7A8A7B" }}>Carregando ranking oficial...</p>
+            <p style={{ fontSize: 14, color: "#7A8A7B" }}>{t("leaderboard_loading")}</p>
           </div>
         ) : ranking.length === 0 ? (
           <div className="px-6 py-8">
@@ -193,10 +195,10 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
                 <Trophy size={28} color="#D68C70" />
               </div>
               <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 500, color: "#2D3A2E", margin: 0 }}>
-                O pódio está à sua espera!
+                {t("leaderboard_empty_title")}
               </h2>
               <p style={{ fontSize: 13, color: "#7A8A7B", lineHeight: 1.5, margin: 0, maxWidth: 280 }}>
-                Nenhum participante acumulou pontos ainda. Complete sessões de foco no Pomodoro ou realize desafios para inaugurar o 1º lugar!
+                {t("leaderboard_empty_desc")}
               </p>
             </div>
           </div>
@@ -362,7 +364,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             {restRanking.length > 0 && (
               <div className="px-6 pb-6 flex-1 overflow-y-auto">
                 <p style={{ fontSize: 12, fontWeight: 600, color: "#7A8A7B", marginBottom: 12 }}>
-                  Demais Participantes
+                  {t("leaderboard_subtitle")}
                 </p>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
@@ -395,7 +397,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
                         />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#2D3A2E", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {user.name} {isCurrentUser && "(Você)"}
+                            {user.name} {isCurrentUser && " (Você)"}
                           </p>
                           {user.curso && (
                             <p style={{ margin: "2px 0 0", fontSize: 11, color: "#7A8A7B" }}>
@@ -404,7 +406,7 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
                           )}
                         </div>
                         <span style={{ fontSize: 13, fontWeight: 700, color: "#D68C70" }}>
-                          {user.points} pts
+                          {user.points} {t("leaderboard_pts")}
                         </span>
                       </div>
                     );
@@ -420,11 +422,6 @@ export function LeaderboardScreen({ onBack }: { onBack: () => void }) {
         isOpen={selectedUser !== null}
         onClose={() => setSelectedUser(null)}
         user={selectedUser}
-        onToggleFollow={(userId, nextState) => {
-          setUsers((prev) =>
-            prev.map((u) => (u.id === userId ? { ...u, isFollowing: nextState } : u))
-          );
-        }}
       />
     </div>
   );

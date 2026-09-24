@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { sendNativeMessage } from "../../services/nativeBridge";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
+import { useTranslation } from "../../i18n";
 
 // Simple QR Code SVG - stylized representation
 const StylizedQRCode = ({ code }: { code: string }) => (
@@ -58,6 +59,7 @@ const StylizedBarcode = ({ code }: { code: string }) => (
 );
 
 export function CardScreen({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation();
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
@@ -98,7 +100,7 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
             alignItems: "center",
             justifyContent: "center",
           }}
-          aria-label="Voltar"
+          aria-label={t("profile_refresh")}
         >
           <ChevronLeft size={24} color="#2D3A2E" />
         </button>
@@ -109,7 +111,7 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
           color: "#2D3A2E",
           margin: 0,
         }}>
-          Carteirinha Digital
+          {t("card_screen_title")}
         </h1>
       </div>
 
@@ -161,10 +163,10 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
                 </svg>
                 <div>
                   <p style={{ margin: 0, fontSize: 11, color: "rgba(253,251,247,0.6)", fontWeight: 500 }}>
-                    LibertApp
+                    {t("card_app_title")}
                   </p>
                   <p style={{ margin: 0, fontSize: 13, color: "#FDFBF7", fontWeight: 600 }}>
-                    Feira Acadêmica 2026
+                    {t("card_edition")}
                   </p>
                 </div>
               </div>
@@ -172,7 +174,7 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
                 background: "rgba(214,140,112,0.25)", borderRadius: 16,
                 padding: "4px 10px", border: "1px solid rgba(214,140,112,0.4)",
               }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#D68C70" }}>NV {displayLevel}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#D68C70" }}>{t("card_level_prefix")} {displayLevel}</span>
               </div>
             </div>
 
@@ -197,7 +199,7 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ margin: 0, fontSize: 11, color: "rgba(253,251,247,0.6)", fontWeight: 500 }}>
-                  Estudante Titular
+                  {t("card_holder")}
                 </p>
                 <p style={{ margin: 0, marginTop: 2, fontSize: 16, color: "#FDFBF7", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {displayName}
@@ -216,7 +218,7 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
             }}>
               <div>
                 <p style={{ margin: 0, fontSize: 10, color: "rgba(253,251,247,0.5)", fontWeight: 500 }}>
-                  Curso / Departamento
+                  {t("card_course_dept")}
                 </p>
                 <p style={{ margin: 0, marginTop: 3, fontSize: 12, color: "#FDFBF7", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {displayCurso}
@@ -224,7 +226,7 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
               </div>
               <div>
                 <p style={{ margin: 0, fontSize: 10, color: "rgba(253,251,247,0.5)", fontWeight: 500 }}>
-                  Nº da Carteira
+                  {t("card_number")}
                 </p>
                 <p style={{ margin: 0, marginTop: 3, fontSize: 12, color: "#FDFBF7", fontWeight: 600 }}>
                   {cardCode}
@@ -246,7 +248,7 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
               fontWeight: 500,
               letterSpacing: "0.5px",
             }}>
-              VÁLIDA PARA IDENTIFICAÇÃO E DESCONTOS NOS ESTABELECIMENTOS
+              {t("card_security_note")}
             </p>
           </div>
         </div>
@@ -274,7 +276,7 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
             color: "#2D3A2E",
             marginBottom: 4,
           }}>
-            Código QR de Validação
+            {t("card_qr_title")}
           </p>
           <StylizedQRCode code={cardCode} />
           <p style={{
@@ -284,7 +286,7 @@ export function CardScreen({ onBack }: { onBack: () => void }) {
             color: "#7A8A7B",
             textAlign: "center",
           }}>
-            Apresente este código ao estabelecimento conveniado
+            {t("card_qr_hint")}
           </p>
         </div>
       </div>

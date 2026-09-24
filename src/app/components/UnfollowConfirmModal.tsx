@@ -1,5 +1,6 @@
 import React from "react";
 import { UserMinus } from "lucide-react";
+import { useTranslation } from "../../i18n";
 
 interface UnfollowConfirmModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ export function UnfollowConfirmModal({
   userName,
   userAvatar,
 }: UnfollowConfirmModalProps) {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   return (
@@ -88,7 +91,7 @@ export function UnfollowConfirmModal({
             lineHeight: 1.3,
           }}
         >
-          Deixar de seguir {userName}?
+          {t("unfollow_btn")} {userName}?
         </h3>
 
         <p
@@ -99,7 +102,7 @@ export function UnfollowConfirmModal({
             margin: "0 0 20px 0",
           }}
         >
-          As publicações e atualizações de foco desse colega não terão mais destaque no seu feed.
+          {t("unfollow_confirm_text")}
         </p>
 
         {/* Buttons */}
@@ -122,7 +125,7 @@ export function UnfollowConfirmModal({
               transition: "opacity 0.15s ease",
             }}
           >
-            Deixar de seguir
+            {t("unfollow_btn")}
           </button>
 
           <button
@@ -139,7 +142,7 @@ export function UnfollowConfirmModal({
               cursor: "pointer",
             }}
           >
-            Cancelar
+            {t("unfollow_cancel_btn")}
           </button>
         </div>
       </div>

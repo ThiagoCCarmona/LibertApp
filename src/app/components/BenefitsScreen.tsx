@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, Unlock, Lock } from "lucide-react";
 import { apiService } from "../../services/apiService";
 import { sendNativeMessage } from "../../services/nativeBridge";
+import { useTranslation } from "../../i18n";
 
 interface BenefitPartner {
   id: number;
@@ -22,6 +23,7 @@ const DEFAULT_PARTNERS: BenefitPartner[] = [
 ];
 
 export function BenefitsScreen({ onBack, onOpenCard }: { onBack: () => void; onOpenCard: () => void }) {
+  const { t } = useTranslation();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [partners, setPartners] = useState<BenefitPartner[]>(DEFAULT_PARTNERS);
   const [userLevel, setUserLevel] = useState(1);
@@ -106,12 +108,12 @@ export function BenefitsScreen({ onBack, onOpenCard }: { onBack: () => void; onO
               alignItems: "center",
               justifyContent: "center",
             }}
-            aria-label="Voltar"
+            aria-label={t("profile_refresh")}
           >
             <ChevronLeft size={24} color="#2D3A2E" />
           </button>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", margin: 0 }}>
-            Meus Benefícios
+            {t("benefits_screen_title")}
           </h1>
         </div>
 
@@ -133,17 +135,21 @@ export function BenefitsScreen({ onBack, onOpenCard }: { onBack: () => void; onO
               boxShadow: "0 8px 24px rgba(214,140,112,0.3)",
             }}
           >
-            📱 Abrir Carteirinha Digital
+            {t("benefits_open_card_btn")}
           </button>
         </div>
 
         {/* Partners section */}
         <div className="px-6 pb-6">
           <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 18, color: "#2D3A2E", marginBottom: 12 }}>
-            Restaurantes Parceiros
+            {t("benefits_partners_title")}
           </h2>
           <p style={{ fontSize: 12, color: "#7A8A7B", marginBottom: 16 }}>
-            Desbloqueados: {unlockedCount} de {totalCount} • Nível atual: {userLevel} ({userPoints} pts)
+            {t("benefits_summary")
+              .replace("{unlocked}", String(unlockedCount))
+              .replace("{total}", String(totalCount))
+              .replace("{level}", String(userLevel))
+              .replace("{points}", String(userPoints))}
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
@@ -164,10 +170,10 @@ export function BenefitsScreen({ onBack, onOpenCard }: { onBack: () => void; onO
                 <div style={{ fontSize: 28 }}>{partner.icone}</div>
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#2D3A2E" }}>
-                    {partner.nome} ({partner.descontoPercentual}% OFF)
+                    {partner.nome} ({partner.descontoPercentual}% {t("benefits_off")})
                   </p>
                   <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#7A8A7B" }}>
-                    Nível {partner.nivelRequerido} • {partner.unlocked ? "Desbloqueado" : "Desbloqueie com mais pontos"}
+                    {t("benefits_level")} {partner.nivelRequerido} • {partner.unlocked ? t("benefits_unlocked") : t("benefits_unlock_hint")}
                   </p>
                   {partner.descricao && (
                     <p style={{ margin: "2px 0 0", fontSize: 11, color: "#7A8A7B" }}>
@@ -204,12 +210,15 @@ export function BenefitsScreen({ onBack, onOpenCard }: { onBack: () => void; onO
             padding: "16px 14px",
           }}>
             <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#2D3A2E", marginBottom: 8 }}>
-              Próxima meta 🎯
+              {t("benefits_next_goal_title")}
             </p>
             <p style={{ margin: 0, fontSize: 14, color: "#7A8A7B", lineHeight: 1.5 }}>
               {nextLocked
-                ? `Acumule pontos no Pomodoro e desafios para atingir o Nível ${nextLocked.nivelRequerido} e desbloquear "${nextLocked.nome}" com ${nextLocked.descontoPercentual}% de desconto!`
-                : "🎉 Parabéns! Você atingiu o nível máximo e desbloqueou todos os parceiros oficiais da feira!"}
+                ? t("benefits_next_goal_desc")
+                    .replace("{level}", String(nextLocked.nivelRequerido))
+                    .replace("{partner}", nextLocked.nome)
+                    .replace("{discount}", String(nextLocked.descontoPercentual))
+                : t("benefits_all_partners_unlocked")}
             </p>
           </div>
         </div>

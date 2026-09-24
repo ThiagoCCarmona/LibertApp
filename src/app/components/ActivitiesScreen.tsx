@@ -91,10 +91,10 @@ export function ActivitiesScreen() {
   })();
 
   const modeConfig = React.useMemo(() => ({
-    focus: { label: "Foco Total", minutes: pomodoroConfig.focusMinutes, color: "#D68C70" },
-    "short-break": { label: "Pausa Curta", minutes: pomodoroConfig.shortBreakMinutes, color: "#6B8F6D" },
-    "long-break": { label: "Pausa Longa", minutes: pomodoroConfig.longBreakMinutes, color: "#C4A882" },
-  }), [pomodoroConfig]);
+    focus: { label: t("act_focus_mode"), minutes: pomodoroConfig.focusMinutes, color: "#D68C70" },
+    "short-break": { label: t("act_short_break"), minutes: pomodoroConfig.shortBreakMinutes, color: "#6B8F6D" },
+    "long-break": { label: t("act_long_break"), minutes: pomodoroConfig.longBreakMinutes, color: "#C4A882" },
+  }), [pomodoroConfig, t]);
 
   // Carrega desafios persistidos do backend (API / SQLite)
   React.useEffect(() => {
@@ -349,7 +349,7 @@ export function ActivitiesScreen() {
             <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", margin: 0 }}>
               {t("act_title")}
             </h1>
-            <p style={{ fontSize: 13, color: "#7A8A7B", marginTop: 2 }}>Tempo de Foco & Hábitos Conscientes</p>
+            <p style={{ fontSize: 13, color: "#7A8A7B", marginTop: 2 }}>{t("act_subtitle")}</p>
           </div>
           <button
             onClick={() => setIsSettingsOpen(true)}
@@ -367,8 +367,8 @@ export function ActivitiesScreen() {
               boxShadow: "0 2px 8px rgba(45,58,46,0.06)",
               transition: "transform 0.15s ease",
             }}
-            title="Ajustar Tempos do Pomodoro"
-            aria-label="Ajustar Tempos do Pomodoro"
+            title={t("act_adjust_time")}
+            aria-label={t("act_adjust_time")}
           >
             <Settings size={20} color="#2D3A2E" />
           </button>
@@ -477,7 +477,7 @@ export function ActivitiesScreen() {
               justifyContent: "center",
               boxShadow: `0 8px 24px ${modeConfig[mode].color}40, 0 2px 8px rgba(45,58,46,0.12)`,
             }}
-            aria-label={isRunning ? "Pausar" : "Iniciar Foco"}
+            aria-label={isRunning ? t("act_pause") : t("act_start_focus")}
           >
             {isRunning ? (
               <Pause size={32} color="#FDFBF7" fill="#FDFBF7" />
@@ -500,8 +500,8 @@ export function ActivitiesScreen() {
               justifyContent: "center",
               boxShadow: "0 2px 8px rgba(45,58,46,0.06)",
             }}
-            title="Configurar Pomodoro"
-            aria-label="Ajustar Tempo"
+            title={t("act_adjust_time")}
+            aria-label={t("act_adjust_time")}
           >
             <Settings size={22} color="#7A8A7B" />
           </button>
@@ -511,10 +511,10 @@ export function ActivitiesScreen() {
         <div className="px-6 pb-6">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 17, color: "#2D3A2E", margin: 0 }}>
-              Progresso de Metas
+              {t("act_goals_progress_title")}
             </h2>
             <span style={{ fontSize: 12, fontWeight: 600, color: "#D68C70" }}>
-              {challengeTab === "daily" ? "Diárias" : challengeTab === "weekly" ? "Semanais" : "Mensais"}
+              {challengeTab === "daily" ? t("act_daily_challenges") : challengeTab === "weekly" ? t("act_weekly_challenges") : t("act_monthly_challenges")}
             </span>
           </div>
 
@@ -527,12 +527,12 @@ export function ActivitiesScreen() {
               overflow: "hidden",
             }}>
               <div style={{ position: "absolute", top: -10, right: -10, width: 60, height: 60, borderRadius: "50%", background: "rgba(214,140,112,0.12)" }} />
-              <p style={{ fontSize: 11, color: "rgba(253,251,247,0.6)", fontWeight: 500, margin: 0 }}>Total de Metas</p>
+              <p style={{ fontSize: 11, color: "rgba(253,251,247,0.6)", fontWeight: 500, margin: 0 }}>{t("act_total_goals")}</p>
               <p style={{ fontFamily: "'Fraunces', serif", fontSize: 32, color: "#FDFBF7", fontWeight: 400, marginTop: 4, margin: 0 }}>
                 {totalGoals}
               </p>
               <p style={{ fontSize: 11, color: "rgba(253,251,247,0.5)", marginTop: 2, margin: 0 }}>
-                {totalGoals === 1 ? "meta ativa" : "metas ativas"}
+                {totalGoals === 1 ? t("act_active_goal") : t("act_active_goals")}
               </p>
             </div>
 
@@ -542,7 +542,7 @@ export function ActivitiesScreen() {
               padding: "16px 14px",
               border: "1px solid rgba(214,140,112,0.2)",
             }}>
-              <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500, margin: 0 }}>Concluídas</p>
+              <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500, margin: 0 }}>{t("act_completed_goals")}</p>
               <p style={{ fontFamily: "'Fraunces', serif", fontSize: 32, color: "#D68C70", fontWeight: 400, marginTop: 4, margin: 0 }}>
                 {completedGoals}
               </p>
@@ -555,7 +555,7 @@ export function ActivitiesScreen() {
           {/* Barra de Progresso Real */}
           <div style={{ marginTop: 10, background: "#F5EFE3", borderRadius: 12, padding: "12px 14px", border: "1px solid rgba(45,58,46,0.06)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#2D3A2E" }}>Aproveitamento das Metas</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#2D3A2E" }}>{t("act_performance")}</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: "#D68C70" }}>{goalPercentage}%</span>
             </div>
             <div style={{ height: 6, borderRadius: 3, background: "#EDE7DA", overflow: "hidden" }}>
@@ -569,8 +569,8 @@ export function ActivitiesScreen() {
             </div>
             <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 6, margin: "6px 0 0 0" }}>
               {goalPercentage === 100 && totalGoals > 0
-                ? "Parabéns! Todas as metas desta seção foram concluídas! 🎉"
-                : `Você completou ${completedGoals} de ${totalGoals} metas. Continue firme!`}
+                ? t("act_all_completed")
+                : t("act_progress_summary").replace("{completed}", String(completedGoals)).replace("{total}", String(totalGoals))}
             </p>
           </div>
         </div>
@@ -579,7 +579,7 @@ export function ActivitiesScreen() {
         <div className="px-6 pb-12">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 17, color: "#2D3A2E", margin: 0 }}>
-              🎯 Suas Metas
+              {t("act_your_goals_title")}
             </h2>
             <button
               onClick={() => {
@@ -602,7 +602,7 @@ export function ActivitiesScreen() {
               }}
             >
               <Plus size={15} />
-              Nova Meta
+              {t("act_new_goal_btn")}
             </button>
           </div>
 
@@ -651,7 +651,7 @@ export function ActivitiesScreen() {
               }}
             >
               <p style={{ fontSize: 13, color: "#7A8A7B", margin: 0 }}>
-                Nenhuma meta cadastrada para esta seção.
+                {t("act_empty_category")}
               </p>
               <button
                 onClick={() => {
@@ -669,7 +669,7 @@ export function ActivitiesScreen() {
                   textDecoration: "underline",
                 }}
               >
-                + Adicionar primeira meta
+                + {t("act_new_goal_btn")}
               </button>
             </div>
           ) : (

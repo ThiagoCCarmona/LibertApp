@@ -742,7 +742,7 @@ export function ProfileScreen({
         {/* Analytics Section */}
         <div className="px-6 pb-4">
           <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 18, color: "#2D3A2E", marginBottom: 12 }}>
-            Relatórios de Bem-estar
+            {t("profile_wellness_title")}
           </h2>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -753,18 +753,18 @@ export function ProfileScreen({
               border: "1px solid rgba(45,58,46,0.08)",
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500, margin: 0 }}>Tela Hoje</p>
-                <span style={{ fontSize: 10, color: "#D68C70", fontWeight: 600 }}>Meta: {dailyLimit}h</span>
+                <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500, margin: 0 }}>{t("profile_screen_today")}</p>
+                <span style={{ fontSize: 10, color: "#D68C70", fontWeight: 600 }}>{t("profile_goal")}: {dailyLimit}h</span>
               </div>
               {screenTimeMinutesToday === null ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
                   <p style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: "#7A8A7B", fontWeight: 400, margin: 0 }}>
-                    {hasUsageAccess ? "Sem dados" : "Acesso de Uso"}
+                    {hasUsageAccess ? t("profile_no_data") : t("profile_usage_access")}
                   </p>
                   <p style={{ fontSize: 9.5, color: "#7A8A7B", margin: 0, lineHeight: 1.25 }}>
                     {hasUsageAccess
-                      ? "Aguardando sincronização de tela..."
-                      : "Libere o acesso de uso nas configurações para ver horas reais."}
+                      ? t("profile_waiting_sync")
+                      : t("profile_grant_usage_desc")}
                   </p>
                   {!hasUsageAccess && (
                     <button
@@ -785,7 +785,7 @@ export function ProfileScreen({
                         marginTop: 4,
                       }}
                     >
-                      <ExternalLink size={10} /> Liberar Acesso
+                      <ExternalLink size={10} /> {t("profile_grant_access_btn")}
                     </button>
                   )}
                 </div>
@@ -804,7 +804,7 @@ export function ProfileScreen({
                     }} />
                   </div>
                   <p style={{ fontSize: 10, color: (screenTimeMinutesToday / 60 / dailyLimit) > 0.9 ? "#C44F35" : "#6B8F6D", fontWeight: 500, marginTop: 4, margin: "4px 0 0 0" }}>
-                    {Math.round((screenTimeMinutesToday / 60 / dailyLimit) * 100)}% do limite diário
+                    {Math.round((screenTimeMinutesToday / 60 / dailyLimit) * 100)}% {t("profile_limit_percentage")}
                   </p>
                 </>
               )}
@@ -816,11 +816,11 @@ export function ProfileScreen({
               padding: "14px 12px",
               border: "1px solid rgba(45,58,46,0.08)",
             }}>
-              <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500 }}>Atividades</p>
+              <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500 }}>{t("profile_activities_week")}</p>
               <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: "#6B8F6D", fontWeight: 400, marginTop: 4 }}>
                 {wellness ? wellness.atividadesSemana : "—"}
               </p>
-              <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 4 }}>esta semana</p>
+              <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 4 }}>{t("profile_this_week")}</p>
             </div>
 
             <div style={{
@@ -829,11 +829,11 @@ export function ProfileScreen({
               padding: "14px 12px",
               border: "1px solid rgba(45,58,46,0.08)",
             }}>
-              <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500 }}>Sequência</p>
+              <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500 }}>{t("profile_streak")}</p>
               <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: "#C4A882", fontWeight: 400, marginTop: 4 }}>
-                {wellness ? `${wellness.sequenciaDias} ${wellness.sequenciaDias === 1 ? "dia" : "dias"}` : "—"}
+                {wellness ? `${wellness.sequenciaDias} ${wellness.sequenciaDias === 1 ? t("profile_consecutive_day") : t("profile_consecutive_days")}` : "—"}
               </p>
-              <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 4 }}>consecutivos</p>
+              <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 4 }}>{t("profile_consecutive_days")}</p>
             </div>
 
             <div style={{
@@ -842,11 +842,11 @@ export function ProfileScreen({
               padding: "14px 12px",
               border: "1px solid rgba(45,58,46,0.08)",
             }}>
-              <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500 }}>Bem-estar</p>
+              <p style={{ fontSize: 11, color: "#7A8A7B", fontWeight: 500 }}>{t("profile_wellness")}</p>
               <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: "#7A8A7B", fontWeight: 400, marginTop: 4 }}>
                 {wellness ? `${wellness.bemEstarScore}%` : "—"}
               </p>
-              <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 4 }}>pontuação</p>
+              <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 4 }}>{t("profile_score")}</p>
             </div>
           </div>
         </div>
@@ -1044,9 +1044,9 @@ export function ProfileScreen({
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <Shield size={20} color="#D68C70" />
                 <div style={{ textAlign: "left" }}>
-                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Painel de Gestão de Usuários</p>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{t("profile_admin_panel")}</p>
                   <p style={{ margin: 0, fontSize: 11, color: "rgba(253,251,247,0.7)", fontWeight: 400 }}>
-                    Controlar, apagar, desativar e redefinir senhas
+                    {t("profile_admin_sub")}
                   </p>
                 </div>
               </div>
@@ -1059,7 +1059,7 @@ export function ProfileScreen({
         <div className="px-6 pb-6">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 18, color: "#2D3A2E", margin: 0 }}>
-              📸 Minhas Publicações ({myPosts.length})
+              📸 {t("profile_my_posts_title")} ({myPosts.length})
             </h2>
             <button
               onClick={() => currentUser?.id && loadMyPosts(currentUser.id)}
@@ -1072,13 +1072,13 @@ export function ProfileScreen({
                 fontWeight: 600,
               }}
             >
-              Atualizar
+              {t("profile_refresh")}
             </button>
           </div>
 
           {loadingPosts ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
-              <p style={{ fontSize: 12, color: "#7A8A7B" }}>Carregando suas publicações...</p>
+              <p style={{ fontSize: 12, color: "#7A8A7B" }}>{t("profile_loading_my_posts")}</p>
             </div>
           ) : myPosts.length === 0 ? (
             <div
@@ -1091,10 +1091,10 @@ export function ProfileScreen({
               }}
             >
               <p style={{ fontSize: 13, color: "#2D3A2E", fontWeight: 600, margin: "0 0 4px 0" }}>
-                Você ainda não publicou no mural
+                {t("profile_no_my_posts_title")}
               </p>
               <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>
-                Compartilhe fotos e conquistas na tela de Início para registrar seus momentos!
+                {t("profile_no_my_posts_desc")}
               </p>
             </div>
           ) : (
@@ -1125,8 +1125,8 @@ export function ProfileScreen({
                         color: "#C4785A",
                         padding: "4px",
                       }}
-                      title="Excluir minha publicação"
-                      aria-label="Excluir publicação"
+                      title={t("profile_delete_post_title")}
+                      aria-label={t("profile_delete_post_title")}
                     >
                       <Trash2 size={15} />
                     </button>
@@ -1141,8 +1141,8 @@ export function ProfileScreen({
                   <p style={{ fontSize: 12, color: "#2D3A2E", margin: 0, lineHeight: 1.4 }}>{p.content}</p>
 
                   <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#7A8A7B", marginTop: 2 }}>
-                    <span>❤️ {p.likes || 0} curtidas</span>
-                    <span>💬 {p.comments || 0} comentários</span>
+                    <span>❤️ {p.likes || 0} {t("feed_likes")}</span>
+                    <span>💬 {p.comments || 0} {t("feed_comments")}</span>
                   </div>
                 </div>
               ))}
@@ -1240,8 +1240,8 @@ export function ProfileScreen({
                     <Users size={18} color="#C4A882" />
                   </div>
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E" }}>Priorizar Quem Você Segue</p>
-                    <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>Mostrar primeiro no Feed</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E" }}>{t("profile_prioritize_following")}</p>
+                    <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>{t("profile_prioritize_following_sub")}</p>
                   </div>
                 </div>
                 <ToggleSwitch enabled={prioritizeFollowing} onChange={handleTogglePrioritizeFollowing} />
@@ -1749,7 +1749,7 @@ export function ProfileScreen({
           }}>
             <span style={{ fontSize: 18 }}>💡</span>
             <p style={{ fontSize: 12, color: "#7A8A7B", lineHeight: 1.4 }}>
-              Pausas regulares ajudam a reduzir ansiedade e melhorar seu bem-estar digital.
+              {t("profile_tip_text")}
             </p>
           </div>
 
@@ -1777,7 +1777,7 @@ export function ProfileScreen({
               }}
             >
               <LogOut size={16} />
-              <span>Sair da conta</span>
+              <span>{t("profile_logout")}</span>
             </button>
           )}
         </div>

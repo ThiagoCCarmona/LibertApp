@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Globe } from "lucide-react";
 import type { Screen } from "../App";
 import { libertAppLogo } from "../../assets/logo";
+import { useTranslation, Language } from "../../i18n";
 
 const LibertLogo = () => (
   <img
@@ -29,6 +30,7 @@ const AppleIcon = () => (
 );
 
 export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+  const { t, language, setLanguage } = useTranslation();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -37,7 +39,7 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
 
   const handleLogin = async () => {
     if (!email.trim() || !senha.trim()) {
-      setErrorMessage("Por favor, preencha e-mail e senha.");
+      setErrorMessage(t("auth_error_fill_fields"));
       return;
     }
 
@@ -68,10 +70,10 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
         localStorage.setItem("currentUser", JSON.stringify(user));
         onNavigate("home");
       } else {
-        setErrorMessage("E-mail ou senha incorretos.");
+        setErrorMessage(t("auth_error_invalid_credentials"));
       }
     } catch (err: any) {
-      setErrorMessage(err?.message || "E-mail ou senha incorretos.");
+      setErrorMessage(err?.message || t("auth_error_invalid_credentials"));
     } finally {
       setIsLoading(false);
     }
@@ -79,13 +81,39 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
 
   return (
     <div className="flex flex-col h-full bg-background overflow-y-auto" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <div className="flex flex-col items-center pt-8 pb-6 px-6">
+      {/* Selector de idioma discreto no canto superior */}
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "16px 20px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(45, 58, 46, 0.06)", borderRadius: 20, padding: "4px 8px" }}>
+          <Globe size={14} color="#7A8A7B" />
+          {(["pt", "en", "es"] as Language[]).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => setLanguage(lang)}
+              style={{
+                background: language === lang ? "#2D3A2E" : "transparent",
+                color: language === lang ? "#FDFBF7" : "#7A8A7B",
+                border: "none",
+                borderRadius: 12,
+                padding: "2px 8px",
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: "pointer",
+                textTransform: "uppercase",
+              }}
+            >
+              {lang}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center pt-4 pb-6 px-6">
         <LibertLogo />
         <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 26, color: "#2D3A2E", marginTop: 14, letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-          Bem-vinda de volta
+          {t("auth_welcome_back")}
         </h1>
         <p style={{ color: "#7A8A7B", fontSize: 14, marginTop: 6, textAlign: "center", lineHeight: 1.5 }}>
-          Continue sua jornada de liberdade.
+          {t("auth_continue_journey")}
         </p>
       </div>
 
@@ -108,7 +136,7 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
 
       <div className="flex flex-col gap-4 px-6">
         <div className="flex flex-col gap-1.5">
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>E-mail</label>
+          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>{t("auth_email")}</label>
           <input
             type="email"
             value={email}
@@ -119,24 +147,24 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
               fontSize: 15, color: "#2D3A2E", outline: "none", width: "100%",
               fontFamily: "'DM Sans', sans-serif",
             }}
-            aria-label="E-mail"
+            aria-label={t("auth_email")}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>Senha</label>
+          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>{t("auth_password")}</label>
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              placeholder="Sua senha"
+              placeholder="••••••••"
               style={{
                 background: "#EDE7DA", border: "none", borderRadius: 12, padding: "14px 48px 14px 16px",
                 fontSize: 15, color: "#2D3A2E", outline: "none", width: "100%",
                 fontFamily: "'DM Sans', sans-serif",
               }}
-              aria-label="Senha"
+              aria-label={t("auth_password")}
             />
             <button
               type="button"
@@ -154,7 +182,7 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
             onClick={() => onNavigate("forgot")}
             style={{ background: "none", border: "none", color: "#D68C70", fontWeight: 500, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
           >
-            Esqueci minha senha
+            {t("auth_forgot_password")}
           </button>
         </div>
 
@@ -168,16 +196,16 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
             boxShadow: "0 4px 16px rgba(214,140,112,0.35)",
             marginTop: 4,
           }}
-          aria-label="Entrar"
+          aria-label={t("auth_login_btn")}
         >
-          {isLoading ? "Entrando..." : "Entrar"}
+          {isLoading ? t("auth_logging_in") : t("auth_login_btn")}
         </button>
       </div>
 
       <div className="px-6 mt-6">
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <div style={{ flex: 1, height: 1, background: "rgba(45,58,46,0.1)" }} />
-          <span style={{ color: "#7A8A7B", fontSize: 12, fontWeight: 500, whiteSpace: "nowrap" }}>ou continue com</span>
+          <span style={{ color: "#7A8A7B", fontSize: 12, fontWeight: 500, whiteSpace: "nowrap" }}>{t("auth_or_continue_with")}</span>
           <div style={{ flex: 1, height: 1, background: "rgba(45,58,46,0.1)" }} />
         </div>
 
@@ -189,10 +217,10 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
               borderRadius: 12, padding: "13px 16px", fontSize: 14, fontWeight: 500,
               color: "#2D3A2E", cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
             }}
-            aria-label="Continuar com Google"
+            aria-label={t("auth_continue_google")}
           >
             <GoogleIcon />
-            Continuar com Google
+            {t("auth_continue_google")}
           </button>
 
           <button
@@ -202,21 +230,21 @@ export function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void })
               borderRadius: 12, padding: "13px 16px", fontSize: 14, fontWeight: 500,
               color: "#2D3A2E", cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
             }}
-            aria-label="Continuar com Apple"
+            aria-label={t("auth_continue_apple")}
           >
             <AppleIcon />
-            Continuar com Apple
+            {t("auth_continue_apple")}
           </button>
         </div>
       </div>
 
       <p style={{ textAlign: "center", color: "#7A8A7B", fontSize: 14, marginTop: "auto", padding: "24px 24px 32px" }}>
-        Não tem conta?{" "}
+        {t("auth_no_account")}{" "}
         <button
           onClick={() => onNavigate("signup")}
           style={{ background: "none", border: "none", color: "#D68C70", fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}
         >
-          Criar conta
+          {t("auth_create_account")}
         </button>
       </p>
     </div>

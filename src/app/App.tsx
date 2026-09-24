@@ -13,6 +13,7 @@ import { CardScreen } from "./components/CardScreen";
 import { LeaderboardScreen } from "./components/LeaderboardScreen";
 import { SearchUsersScreen } from "./components/SearchUsersScreen";
 import { startNotificationScheduler } from "../services/notificationScheduler";
+import { PwaInstallBanner } from "./components/PwaInstallBanner";
 
 export type Tab = "home" | "activities" | "profile";
 export type Screen = "splash" | "login" | "signup" | "forgot" | "home" | "main" | "editProfile" | "benefits" | "card" | "leaderboard" | "searchUsers";
@@ -248,6 +249,8 @@ export default function App() {
           </button>
         </div>
       )}
+
+      <PwaInstallBanner />
 
       {currentScreen === "splash" ? (
         <SplashScreen onComplete={handleSplashComplete} />

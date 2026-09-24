@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { X, Image as ImageIcon, Sparkles, Trash2, Upload, Camera } from "lucide-react";
 import { isMauiHybrid, pickNativeImage } from "../../services/nativeBridge";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
+import { useTranslation } from "../../i18n";
 
 interface NewPostModalProps {
   isOpen: boolean;
@@ -14,16 +15,19 @@ interface NewPostModalProps {
   }) => void;
 }
 
-const CATEGORIES = [
-  { id: "nature", label: "Natureza & Ar Livre", icon: "🏔️", color: "#E8D7C8" },
-  { id: "memory", label: "Foco & Atenção", icon: "🧠", color: "#FCE4EC" },
-  { id: "games", label: "Gincana & Jogos", icon: "🎯", color: "#FFEBEE" },
-  { id: "reading", label: "Leitura & Estudo", icon: "📖", color: "#E8F5E9" },
-];
-
 export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) {
+  const { t } = useTranslation();
+
+  const categories = [
+    { id: "nature", label: t("cat_nature"), icon: "🏔️", color: "#E8D7C8" },
+    { id: "memory", label: t("cat_focus"), icon: "🧠", color: "#FCE4EC" },
+    { id: "games", label: t("cat_games"), icon: "🎯", color: "#FFEBEE" },
+    { id: "reading", label: t("cat_reading"), icon: "📖", color: "#E8F5E9" },
+  ];
+
   const [content, setContent] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("nature");
+  const selectedCategory = categories.find((c) => c.id === selectedCategoryId) || categories[0];
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
@@ -182,7 +186,7 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
               justifyContent: "center",
               cursor: "pointer",
             }}
-            aria-label="Fechar"
+            aria-label={t("common_close")}
           >
             <X size={18} color="#2D3A2E" />
           </button>
@@ -196,7 +200,7 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
               margin: 0,
             }}
           >
-            Nova Publicação
+            {t("post_modal_title")}
           </h2>
 
           <button
@@ -216,7 +220,7 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
               transition: "all 0.2s ease",
             }}
           >
-            Publicar
+            {isCompressing ? t("post_publishing") : t("post_publish_btn")}
           </button>
         </div>
 
@@ -227,7 +231,7 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
             const s = localStorage.getItem("currentUser");
             if (s) cur = JSON.parse(s);
           } catch {}
-          const name = cur?.nome || "Você";
+          const name = cur?.nome || t("user_you");
           const avatar = cur?.fotoUrl || DEFAULT_AVATAR_URL;
           return (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
@@ -242,13 +246,13 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
               >
                 <img
                   src={avatar}
-                  alt="Seu avatar"
+                  alt={name}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               </div>
               <div>
                 <p style={{ fontSize: 14, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>{name}</p>
-                <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>Compartilhando com a comunidade</p>
+                <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>{t("post_sharing_with_community")}</p>
               </div>
             </div>
           );
@@ -258,7 +262,7 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Como foi seu momento desconectado hoje? Compartilhe conquistas, sensações ou reflexões..."
+          placeholder={t("post_placeholder")}
           rows={3}
           style={{
             width: "100%",
@@ -331,8 +335,8 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
                 cursor: "pointer",
                 boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
               }}
-              title="Remover foto"
-              aria-label="Remover foto"
+              title={t("post_remove_photo")}
+              aria-label={t("post_remove_photo")}
             >
               <Trash2 size={16} />
             </button>
@@ -341,22 +345,22 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
 
         {isCompressing && (
           <p style={{ fontSize: 12, color: "#D68C70", marginTop: 8, textAlign: "center" }}>
-            Otimizando imagem para o padrão Instagram...
+            {t("post_optimizing_image")}
           </p>
         )}
 
         {/* Categories Selector */}
         <div style={{ marginTop: 14 }}>
           <p style={{ fontSize: 12, fontWeight: 600, color: "#7A8A7B", marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
-            <Sparkles size={14} color="#D68C70" /> Escolha o tema do momento:
+            <Sparkles size={14} color="#D68C70" /> {t("post_choose_theme")}
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {CATEGORIES.map((cat) => {
+            {categories.map((cat) => {
               const isSelected = selectedCategory.id === cat.id;
               return (
                 <button
                   key={cat.id}
-                  onClick={() => setSelectedCategory(cat)}
+                  onClick={() => setSelectedCategoryId(cat.id)}
                   style={{
                     background: isSelected ? "#2D3A2E" : "#F5EFE3",
                     color: isSelected ? "#FDFBF7" : "#2D3A2E",
@@ -409,11 +413,11 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
             }}
           >
             {imagePreview ? <Upload size={16} color="#D68C70" /> : <ImageIcon size={16} color="#D68C70" />}
-            <span>{imagePreview ? "Trocar Foto" : "Fazer Upload de Foto"}</span>
+            <span>{imagePreview ? t("post_change_photo") : t("post_upload_photo")}</span>
           </button>
 
           <span style={{ fontSize: 11, color: "#7A8A7B" }}>
-            {content.length} caracteres
+            {content.length} {t("post_chars")}
           </span>
         </div>
       </div>
@@ -450,10 +454,10 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
             <div style={{ textAlign: "center", marginBottom: 6 }}>
               <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(45,58,46,0.2)", margin: "0 auto 12px" }} />
               <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: "#2D3A2E", margin: 0 }}>
-                Adicionar Foto à Publicação
+                {t("post_add_photo_title")}
               </h3>
               <p style={{ fontSize: 12, color: "#7A8A7B", marginTop: 4, margin: 0 }}>
-                Escolha como deseja anexar sua imagem
+                {t("post_add_photo_sub")}
               </p>
             </div>
 
@@ -477,7 +481,7 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
               <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(214,140,112,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Camera size={18} color="#D68C70" />
               </div>
-              <span>Tirar Foto com a Câmera</span>
+              <span>{t("profile_photo_camera")}</span>
             </button>
 
             <button
@@ -500,7 +504,7 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
               <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(107,143,109,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <ImageIcon size={18} color="#6B8F6D" />
               </div>
-              <span>Escolher da Galeria de Fotos</span>
+              <span>{t("profile_photo_gallery")}</span>
             </button>
 
             <button
@@ -518,7 +522,7 @@ export function NewPostModal({ isOpen, onClose, onPublish }: NewPostModalProps) 
                 fontFamily: "'DM Sans', sans-serif",
               }}
             >
-              Cancelar
+              {t("common_cancel")}
             </button>
           </div>
         </div>

@@ -138,6 +138,22 @@ Os arquivos estão centralizados em:
 
 ---
 
+## 📲 Progressive Web App (PWA) — Instalação pelo Navegador
+
+O **LibertApp** agora pode ser instalado diretamente a partir de qualquer navegador web moderno (Chrome, Edge, Safari, Firefox no Android, iOS, Windows, macOS e Linux):
+
+- **Como instalar**:
+  - **Android (Chrome/Edge)**: Abra o site e toque no banner inferior *"Instalar App"* ou vá no menu do navegador (⋮) > *"Adicionar à tela inicial"*.
+  - **iOS (Safari)**: Toque no botão de Compartilhamento (ícone de quadrado com seta para cima) > *"Adicionar à Tela de Início"*.
+  - **Desktop (Chrome/Edge)**: Clique no ícone de instalação (🖥️ / ⊕) na barra de endereços ou aceite o banner do app.
+- **Vantagens**:
+  - Funciona em tela cheia independente de navegador (*standalone mode*).
+  - Ícone dedicado no launcher e tela inicial.
+  - Armazenamento em cache offline via Service Worker (`sw.js`).
+  - Atualizações instantâneas sem necessidade de reinstalar APK.
+
+---
+
 ## 🚀 Como Fazer Deploy em Produção (VPS Linux / Docker)
 
 ### 1. Deploy da API com `systemd` e `Nginx` (Ubuntu/Debian)

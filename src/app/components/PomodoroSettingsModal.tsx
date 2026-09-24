@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { X, Check, RotateCcw, Clock, Coffee, Sparkles } from "lucide-react";
+import { useTranslation } from "../../i18n";
 
 export interface PomodoroConfig {
   focusMinutes: number;
@@ -33,6 +34,7 @@ export function PomodoroSettingsModal({
   currentConfig,
   onSave,
 }: PomodoroSettingsModalProps) {
+  const { t } = useTranslation();
   const [config, setConfig] = useState<PomodoroConfig>(currentConfig);
 
   if (!isOpen) return null;
@@ -109,10 +111,10 @@ export function PomodoroSettingsModal({
                   margin: 0,
                 }}
               >
-                Ajustar Pomodoro
+                {t("pomodoro_modal_title")}
               </h2>
               <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>
-                Personalize seus ciclos de concentração
+                {t("pomodoro_modal_sub")}
               </p>
             </div>
           </div>
@@ -130,7 +132,7 @@ export function PomodoroSettingsModal({
               justifyContent: "center",
               cursor: "pointer",
             }}
-            aria-label="Fechar"
+            aria-label={t("common_close")}
           >
             <X size={18} color="#2D3A2E" />
           </button>
@@ -143,7 +145,7 @@ export function PomodoroSettingsModal({
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E", display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#D68C70" }} />
-                Foco Total
+                {t("pomodoro_focus_label")}
               </label>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#D68C70" }}>
                 {config.focusMinutes} min
@@ -180,7 +182,7 @@ export function PomodoroSettingsModal({
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E", display: "flex", alignItems: "center", gap: 6 }}>
                 <Coffee size={15} color="#6B8F6D" />
-                Pausa Curta
+                {t("pomodoro_short_break_label")}
               </label>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#6B8F6D" }}>
                 {config.shortBreakMinutes} min
@@ -216,7 +218,7 @@ export function PomodoroSettingsModal({
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E", display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#C4A882" }} />
-                Pausa Longa
+                {t("pomodoro_long_break_label")}
               </label>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#C4A882" }}>
                 {config.longBreakMinutes} min
@@ -252,10 +254,10 @@ export function PomodoroSettingsModal({
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E", display: "flex", alignItems: "center", gap: 6 }}>
                 <Sparkles size={15} color="#D68C70" />
-                Meta Diária de Sessões
+                {t("pomodoro_daily_goal_label")}
               </label>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#2D3A2E" }}>
-                {config.dailyGoal} sessões
+                {config.dailyGoal} {t("activities_cycles_count")}
               </span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -304,7 +306,7 @@ export function PomodoroSettingsModal({
             }}
           >
             <RotateCcw size={16} />
-            Padrão
+            {t("pomodoro_restore_default")}
           </button>
 
           <button
@@ -328,7 +330,7 @@ export function PomodoroSettingsModal({
             }}
           >
             <Check size={18} />
-            Salvar Configurações
+            {t("pomodoro_save")}
           </button>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { ChevronLeft, CheckCircle, AlertCircle } from "lucide-react";
 import type { Screen } from "../App";
 import { libertAppLogo } from "../../assets/logo";
 import { apiService } from "../../services/apiService";
+import { useTranslation } from "../../i18n";
 
 const EnvelopeIllustration = () => (
   <img
@@ -15,6 +16,7 @@ const EnvelopeIllustration = () => (
 );
 
 export function PasswordRecoveryScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -23,7 +25,7 @@ export function PasswordRecoveryScreen({ onNavigate }: { onNavigate: (s: Screen)
   const handleRecover = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!email.trim() || !email.includes("@")) {
-      setErrorMessage("Por favor, digite um e-mail válido.");
+      setErrorMessage(t("auth_error_invalid_credentials"));
       return;
     }
 
@@ -33,10 +35,10 @@ export function PasswordRecoveryScreen({ onNavigate }: { onNavigate: (s: Screen)
 
     try {
       const res = await apiService.recoverPassword(email.trim());
-      setSuccessMessage(res.message || "Link de recuperação enviado com sucesso para o seu e-mail!");
+      setSuccessMessage(res.message || t("auth_recovery_success"));
     } catch (err: any) {
       // Mesmo com erro de conexão, fornecemos instrução clara
-      setSuccessMessage("Instruções de redefinição de acesso enviadas para o seu e-mail.");
+      setSuccessMessage(t("auth_recovery_success"));
     } finally {
       setIsLoading(false);
     }
@@ -52,10 +54,10 @@ export function PasswordRecoveryScreen({ onNavigate }: { onNavigate: (s: Screen)
             color: "#7A8A7B", fontSize: 14, fontWeight: 500, cursor: "pointer", padding: "8px 4px",
             fontFamily: "'DM Sans', sans-serif",
           }}
-          aria-label="Voltar"
+          aria-label={t("auth_recovery_back_login")}
         >
           <ChevronLeft size={20} />
-          Voltar
+          {t("auth_recovery_back_login")}
         </button>
       </div>
 
@@ -74,14 +76,14 @@ export function PasswordRecoveryScreen({ onNavigate }: { onNavigate: (s: Screen)
           fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 26, color: "#2D3A2E",
           marginTop: 20, textAlign: "center", letterSpacing: "-0.4px", lineHeight: 1.2,
         }}>
-          Recuperar Senha
+          {t("auth_recovery_title")}
         </h1>
 
         <p style={{
           color: "#7A8A7B", fontSize: 14, marginTop: 8, textAlign: "center",
           lineHeight: 1.5, maxWidth: 280,
         }}>
-          Digite o e-mail cadastrado na feira acadêmica para redefinir seu acesso.
+          {t("auth_recovery_sub")}
         </p>
 
         {successMessage ? (
@@ -96,9 +98,6 @@ export function PasswordRecoveryScreen({ onNavigate }: { onNavigate: (s: Screen)
             <p style={{ fontSize: 14, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>
               {successMessage}
             </p>
-            <p style={{ fontSize: 12, color: "#7A8A7B", margin: 0, lineHeight: 1.4 }}>
-              Verifique sua caixa de entrada e spam. Caso não receba em alguns minutos, contate o estande da organização.
-            </p>
             <button
               onClick={() => onNavigate("login")}
               style={{
@@ -107,7 +106,7 @@ export function PasswordRecoveryScreen({ onNavigate }: { onNavigate: (s: Screen)
                 cursor: "pointer",
               }}
             >
-              Voltar para Entrar
+              {t("auth_recovery_back_login")}
             </button>
           </div>
         ) : (
@@ -130,7 +129,7 @@ export function PasswordRecoveryScreen({ onNavigate }: { onNavigate: (s: Screen)
               border: "1px solid rgba(45,58,46,0.08)",
             }}>
               <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B", display: "block", marginBottom: 8 }}>
-                E-mail cadastrado
+                {t("auth_email")}
               </label>
               <input
                 type="email"
@@ -143,7 +142,7 @@ export function PasswordRecoveryScreen({ onNavigate }: { onNavigate: (s: Screen)
                   fontSize: 15, color: "#2D3A2E", outline: "none", width: "100%",
                   fontFamily: "'DM Sans', sans-serif",
                 }}
-                aria-label="E-mail para recuperação"
+                aria-label={t("auth_email")}
               />
             </div>
 
@@ -156,24 +155,12 @@ export function PasswordRecoveryScreen({ onNavigate }: { onNavigate: (s: Screen)
                 cursor: isLoading ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif", marginTop: 16,
                 boxShadow: "0 4px 16px rgba(214,140,112,0.35)", opacity: isLoading ? 0.7 : 1,
               }}
-              aria-label="Enviar link de recuperação"
+              aria-label={t("auth_recovery_send_btn")}
             >
-              {isLoading ? "Enviando link..." : "Enviar link de recuperação"}
+              {isLoading ? t("auth_recovery_sending") : t("auth_recovery_send_btn")}
             </button>
           </form>
         )}
-
-        <div
-          style={{
-            marginTop: 24, padding: "14px 20px", borderRadius: 12,
-            background: "rgba(214,140,112,0.08)", border: "1px solid rgba(214,140,112,0.2)",
-            width: "100%",
-          }}
-        >
-          <p style={{ fontSize: 12, color: "#7A8A7B", textAlign: "center", lineHeight: 1.5, margin: 0 }}>
-            💛 Você receberá o e-mail em até <strong style={{ color: "#2D3A2E" }}>2 minutos</strong>. Verifique também sua pasta de spam.
-          </p>
-        </div>
       </div>
 
       <p style={{ textAlign: "center", color: "#7A8A7B", fontSize: 14, padding: "16px 24px 32px" }}>
@@ -181,7 +168,7 @@ export function PasswordRecoveryScreen({ onNavigate }: { onNavigate: (s: Screen)
           onClick={() => onNavigate("login")}
           style={{ background: "none", border: "none", color: "#D68C70", fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}
         >
-          ← Voltar ao login
+          {t("auth_recovery_back_login")}
         </button>
       </p>
     </div>

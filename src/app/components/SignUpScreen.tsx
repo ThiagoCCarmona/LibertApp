@@ -3,6 +3,7 @@ import { Eye, EyeOff, Upload } from "lucide-react";
 import type { Screen } from "../App";
 import { libertAppLogo } from "../../assets/logo";
 import { DEFAULT_AVATARS, DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
+import { useTranslation } from "../../i18n";
 
 const LibertLogo = () => (
   <img
@@ -58,6 +59,7 @@ const Toggle = ({ checked, onChange, label, description }: { checked: boolean; o
 );
 
 export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+  const { t } = useTranslation();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -106,27 +108,27 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
 
   const handleRegister = async () => {
     if (!nome.trim() || !email.trim() || !senha.trim()) {
-      setErrorMessage("Por favor, preencha Nome, E-mail e Senha.");
+      setErrorMessage(t("auth_error_fill_fields"));
       return;
     }
 
     if (!email.includes("@") || !email.includes(".")) {
-      setErrorMessage("Por favor, insira um e-mail válido.");
+      setErrorMessage(t("auth_error_invalid_credentials"));
       return;
     }
 
     if (senha.length < 6) {
-      setErrorMessage("A senha deve ter pelo menos 6 caracteres.");
+      setErrorMessage(t("auth_error_password_length"));
       return;
     }
 
     if (senha !== confirmSenha) {
-      setErrorMessage("A confirmação de senha não confere.");
+      setErrorMessage(t("auth_error_passwords_mismatch"));
       return;
     }
 
     if (!aceitaTermos) {
-      setErrorMessage("É necessário aceitar os termos de convivência da feira.");
+      setErrorMessage(t("auth_terms_label"));
       return;
     }
 
@@ -179,10 +181,10 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
       <div className="flex flex-col items-center pt-6 pb-2 px-6">
         <LibertLogo />
         <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 26, color: "#2D3A2E", marginTop: 12, letterSpacing: "-0.3px", lineHeight: 1.2 }}>
-          Cadastro na Comunidade
+          {t("auth_signup_title")}
         </h1>
         <p style={{ color: "#7A8A7B", fontSize: 13, marginTop: 4, textAlign: "center", lineHeight: 1.4 }}>
-          Crie seu perfil oficial para participar do evento e do ranking.
+          {t("auth_signup_sub")}
         </p>
       </div>
 
@@ -206,7 +208,7 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
       {/* Seletor de Foto de Perfil & Upload */}
       <div className="px-6 pb-3 flex flex-col items-center">
         <p style={{ fontSize: 12, fontWeight: 600, color: "#7A8A7B", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          Escolha um avatar ou envie sua foto
+          {t("auth_choose_avatar")}
         </p>
         
         {/* Preview do avatar selecionado */}
@@ -288,14 +290,14 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
           ))}
         </div>
         <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 4 }}>
-          Toque em um ícone ou no botão preto de câmera para enviar foto
+          {t("auth_upload_custom_photo")}
         </p>
       </div>
 
       <div className="flex flex-col gap-3.5 px-6 pb-4">
         {/* Nome */}
         <div className="flex flex-col gap-1">
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>Nome completo *</label>
+          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>{t("auth_fullname")} *</label>
           <input
             type="text"
             value={nome}
@@ -306,13 +308,13 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
               fontSize: 14, color: "#2D3A2E", outline: "none", width: "100%",
               fontFamily: "'DM Sans', sans-serif",
             }}
-            aria-label="Nome completo"
+            aria-label={t("auth_fullname")}
           />
         </div>
 
         {/* E-mail */}
         <div className="flex flex-col gap-1">
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>E-mail *</label>
+          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>{t("auth_email")} *</label>
           <input
             type="email"
             value={email}
@@ -323,13 +325,13 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
               fontSize: 14, color: "#2D3A2E", outline: "none", width: "100%",
               fontFamily: "'DM Sans', sans-serif",
             }}
-            aria-label="E-mail"
+            aria-label={t("auth_email")}
           />
         </div>
 
         {/* Telefone / WhatsApp */}
         <div className="flex flex-col gap-1">
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>WhatsApp / Celular</label>
+          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>{t("auth_phone")}</label>
           <input
             type="tel"
             value={telefone}
@@ -341,25 +343,25 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
               fontSize: 14, color: "#2D3A2E", outline: "none", width: "100%",
               fontFamily: "'DM Sans', sans-serif",
             }}
-            aria-label="Telefone"
+            aria-label={t("auth_phone")}
           />
         </div>
 
         {/* Senha */}
         <div className="flex flex-col gap-1">
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>Senha *</label>
+          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>{t("auth_password")} *</label>
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
+              placeholder="••••••••"
               style={{
                 background: "#EDE7DA", border: "none", borderRadius: 12, padding: "12px 44px 12px 16px",
                 fontSize: 14, color: "#2D3A2E", outline: "none", width: "100%",
                 fontFamily: "'DM Sans', sans-serif",
               }}
-              aria-label="Senha"
+              aria-label={t("auth_password")}
             />
             <button
               type="button"
@@ -374,18 +376,18 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
 
         {/* Confirmar Senha */}
         <div className="flex flex-col gap-1">
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>Confirmar Senha *</label>
+          <label style={{ fontSize: 13, fontWeight: 500, color: "#7A8A7B" }}>{t("auth_confirm_password")} *</label>
           <input
             type={showPassword ? "text" : "password"}
             value={confirmSenha}
             onChange={(e) => setConfirmSenha(e.target.value)}
-            placeholder="Digite a senha novamente"
+            placeholder="••••••••"
             style={{
               background: "#EDE7DA", border: "none", borderRadius: 12, padding: "12px 16px",
               fontSize: 14, color: "#2D3A2E", outline: "none", width: "100%",
               fontFamily: "'DM Sans', sans-serif",
             }}
-            aria-label="Confirmar Senha"
+            aria-label={t("auth_confirm_password")}
           />
         </div>
 
@@ -398,7 +400,7 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
             style={{ marginTop: 2, accentColor: "#D68C70", width: 16, height: 16 }}
           />
           <span style={{ fontSize: 12, color: "#7A8A7B", lineHeight: 1.4 }}>
-            Concordo com os termos de convivência respeitosa e bem-estar digital da Feira Acadêmica Carmelita.
+            {t("auth_terms_desc")}
           </span>
         </label>
       </div>
@@ -414,18 +416,18 @@ export function SignUpScreen({ onNavigate }: { onNavigate: (s: Screen) => void }
             boxShadow: "0 4px 16px rgba(214,140,112,0.35)",
             transition: "opacity 0.15s",
           }}
-          aria-label="Concluir Cadastro"
+          aria-label={t("auth_register_btn")}
         >
-          {isLoading ? "Criando perfil..." : "Criar Meu Perfil Oficial"}
+          {isLoading ? t("auth_registering") : t("auth_register_btn")}
         </button>
 
         <p style={{ textAlign: "center", color: "#7A8A7B", fontSize: 14, marginTop: 14 }}>
-          Já possui conta?{" "}
+          {t("auth_have_account")}{" "}
           <button
             onClick={() => onNavigate("login")}
             style={{ background: "none", border: "none", color: "#D68C70", fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}
           >
-            Entrar
+            {t("auth_enter_link")}
           </button>
         </p>
       </div>

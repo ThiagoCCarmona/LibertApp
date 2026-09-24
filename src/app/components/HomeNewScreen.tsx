@@ -269,7 +269,7 @@ export function HomeNewScreen({
         {/* Header */}
         <div className="px-6 pt-4 pb-3 flex items-center justify-between">
           <div>
-            <p style={{ fontSize: 13, color: "#7A8A7B", fontWeight: 400 }}>Bem-vindo(a),</p>
+            <p style={{ fontSize: 13, color: "#7A8A7B", fontWeight: 400 }}>{t("feed_welcome")},</p>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", lineHeight: 1.2, marginTop: 1 }}>
                 {displayName} 👋
@@ -306,8 +306,8 @@ export function HomeNewScreen({
                 cursor: "pointer",
                 boxShadow: "0 2px 8px rgba(45,58,46,0.06)",
               }}
-              title="Buscar Colegas para Seguir"
-              aria-label="Buscar Colegas"
+              title={t("feed_search_colleagues_title")}
+              aria-label={t("feed_search_colleagues_title")}
             >
               <UserPlus size={20} color="#2D3A2E" strokeWidth={2} />
             </button>
@@ -326,8 +326,8 @@ export function HomeNewScreen({
                 cursor: "pointer",
                 boxShadow: "0 4px 12px rgba(214,140,112,0.3)",
               }}
-              title="Ver Pódio"
-              aria-label="Ver Pódio"
+              title={t("feed_leaderboard_title")}
+              aria-label={t("feed_leaderboard_title")}
             >
               <Trophy size={22} color="#FDFBF7" strokeWidth={2} />
             </button>
@@ -358,7 +358,7 @@ export function HomeNewScreen({
                   background: "rgba(214,140,112,0.25)", borderRadius: 20,
                   padding: "4px 12px", border: "1px solid rgba(214,140,112,0.4)",
                 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "#D68C70", letterSpacing: "0.05em" }}>MEMBRO ATIVO</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#D68C70", letterSpacing: "0.05em" }}>{t("feed_card_member")}</span>
                 </div>
               </div>
 
@@ -390,7 +390,7 @@ export function HomeNewScreen({
 
             <div style={{ background: "#F5EFE3", padding: "14px 18px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E" }}>Benefícios Progressivos</p>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E" }}>{t("feed_card_category")}</p>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "#D68C70" }}>{unlockedCount}/{totalCount}</span>
               </div>
               <div style={{ height: 7, borderRadius: 4, background: "#EDE7DA", overflow: "hidden" }}>
@@ -402,8 +402,8 @@ export function HomeNewScreen({
               </div>
               <p style={{ fontSize: 10, color: "#7A8A7B", marginTop: 5 }}>
                 {totalCount - unlockedCount > 0
-                  ? `${totalCount - unlockedCount} restaurante(s) para desbloquear`
-                  : "Todos os restaurantes parceiros desbloqueados!"}
+                  ? t("feed_unlocked_restaurants").replace("{count}", String(totalCount - unlockedCount))
+                  : t("feed_all_restaurants_unlocked")}
               </p>
             </div>
           </div>
@@ -415,7 +415,7 @@ export function HomeNewScreen({
             {t("feed_title")}
           </h2>
           <span style={{ fontSize: 12, color: "#7A8A7B" }}>
-            {posts.length} {posts.length === 1 ? "post" : "posts"}
+            {posts.length} {posts.length === 1 ? t("feed_post_singular") : t("feed_posts_count")}
           </span>
         </div>
 
@@ -424,7 +424,7 @@ export function HomeNewScreen({
           {isLoading ? (
             <div style={{ textAlign: "center", padding: "40px 20px" }}>
               <div style={{ fontSize: 24, marginBottom: 8, animation: "pulse 1.5s infinite" }}>⏳</div>
-              <p style={{ fontSize: 14, color: "#7A8A7B" }}>Carregando publicações...</p>
+              <p style={{ fontSize: 14, color: "#7A8A7B" }}>{t("feed_loading")}</p>
             </div>
           ) : posts.length === 0 ? (
             <div
@@ -544,7 +544,7 @@ export function HomeNewScreen({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              SEGUINDO
+                              {t("user_following").toUpperCase()}
                             </span>
                           )}
                         </div>
@@ -568,8 +568,8 @@ export function HomeNewScreen({
                           alignItems: "center",
                           justifyContent: "center",
                         }}
-                        title={currentUser?.isAdmin && !isOwner ? "Excluir como Administrador" : "Excluir minha publicação"}
-                        aria-label="Excluir publicação"
+                        title={currentUser?.isAdmin && !isOwner ? "Excluir como Administrador" : t("profile_delete_post_title")}
+                        aria-label={t("profile_delete_post_title")}
                       >
                         <Trash2 size={16} />
                       </button>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Check, Target, Award } from "lucide-react";
+import { useTranslation } from "../../i18n";
 
 export interface MetaItem {
   id?: number;
@@ -17,12 +18,6 @@ interface MetaModalProps {
   defaultCategory?: "daily" | "weekly" | "monthly";
 }
 
-const CATEGORIES = [
-  { id: "daily" as const, label: "Diária" },
-  { id: "weekly" as const, label: "Semanal" },
-  { id: "monthly" as const, label: "Mensal" },
-];
-
 const POINTS_PRESETS = [30, 50, 75, 100, 150];
 
 export function MetaModal({
@@ -32,6 +27,14 @@ export function MetaModal({
   initialMeta,
   defaultCategory = "daily",
 }: MetaModalProps) {
+  const { t } = useTranslation();
+
+  const categories = [
+    { id: "daily" as const, label: t("meta_period_daily") },
+    { id: "weekly" as const, label: t("meta_period_weekly") },
+    { id: "monthly" as const, label: t("meta_period_monthly") },
+  ];
+
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<"daily" | "weekly" | "monthly">(defaultCategory);
   const [points, setPoints] = useState(50);
@@ -129,10 +132,10 @@ export function MetaModal({
                   margin: 0,
                 }}
               >
-                {isEditing ? "Editar Meta" : "Nova Meta"}
+                {isEditing ? t("meta_modal_edit_title") : t("meta_modal_new_title")}
               </h2>
               <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>
-                Defina um objetivo consciente de rotina
+                {t("meta_modal_sub")}
               </p>
             </div>
           </div>
@@ -150,7 +153,7 @@ export function MetaModal({
               justifyContent: "center",
               cursor: "pointer",
             }}
-            aria-label="Fechar"
+            aria-label={t("common_close")}
           >
             <X size={18} color="#2D3A2E" />
           </button>
@@ -161,13 +164,13 @@ export function MetaModal({
           {/* Título */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
-              Título da Meta
+              {t("meta_title_label")}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Fazer 20 min de leitura sem celular..."
+              placeholder={t("meta_title_placeholder")}
               autoFocus
               style={{
                 width: "100%",
@@ -187,10 +190,10 @@ export function MetaModal({
           {/* Categoria */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
-              Frequência
+              {t("meta_period_label")}
             </label>
             <div style={{ display: "flex", gap: 8 }}>
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
@@ -219,7 +222,7 @@ export function MetaModal({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "flex", alignItems: "center", gap: 4 }}>
                 <Award size={14} color="#D68C70" />
-                Pontos de Recompensa
+                {t("meta_points_label")}
               </label>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#D68C70" }}>
                 +{points} pts
@@ -276,7 +279,7 @@ export function MetaModal({
               }}
             >
               <Check size={18} />
-              {isEditing ? "Salvar Alterações" : "Adicionar Meta"}
+              {isEditing ? t("meta_save_btn") : t("meta_create_btn")}
             </button>
           </div>
         </form>

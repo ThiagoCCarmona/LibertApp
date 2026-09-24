@@ -4,6 +4,7 @@ import { UserProfileModal, type UserProfileData } from "./UserProfileModal";
 import { UnfollowConfirmModal } from "./UnfollowConfirmModal";
 import { sendNativeMessage } from "../../services/nativeBridge";
 import { apiService, type SearchUserDto } from "../../services/apiService";
+import { useTranslation } from "../../i18n";
 
 export interface SearchableUser {
   id: number;
@@ -20,6 +21,7 @@ export interface SearchableUser {
 }
 
 export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [users, setUsers] = useState<SearchableUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,7 +141,7 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
               justifyContent: "center",
               cursor: "pointer",
             }}
-            aria-label="Voltar"
+            aria-label={t("profile_refresh")}
           >
             <ChevronLeft size={20} color="#2D3A2E" />
           </button>
@@ -152,7 +154,7 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
               margin: 0,
             }}
           >
-            Encontrar Colegas
+            {t("search_screen_title")}
           </h1>
         </div>
 
@@ -174,7 +176,7 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
           }}
         >
           <Filter size={14} />
-          <span>{filterFollowingOnly ? "Seguindo" : "Todos"}</span>
+          <span>{filterFollowingOnly ? t("search_filter_following") : t("search_filter_all")}</span>
         </button>
       </div>
 
@@ -196,7 +198,7 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por nome ou curso..."
+            placeholder={t("search_input_placeholder")}
             style={{
               width: "100%",
               background: "transparent",
@@ -241,11 +243,11 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Sparkles size={16} color="#D68C70" />
             <p style={{ fontSize: 12, color: "#2D3A2E", margin: 0 }}>
-              Siga colegas para acompanhar o foco mútuo no feed
+              {t("profile_prioritize_following_sub")}
             </p>
           </div>
           <span style={{ fontSize: 11, fontWeight: 700, color: "#D68C70" }}>
-            {filteredUsers.length} encontrados
+            {filteredUsers.length}
           </span>
         </div>
       </div>
@@ -256,10 +258,10 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
           <div style={{ textAlign: "center", padding: "40px 20px" }}>
             <p style={{ fontSize: 32, margin: "0 0 10px 0" }}>🔍</p>
             <p style={{ fontSize: 14, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>
-              Nenhum colega encontrado
+              {t("search_empty_title")}
             </p>
             <p style={{ fontSize: 12, color: "#7A8A7B", marginTop: 4 }}>
-              Tente outro nome ou curso acadêmico.
+              {t("search_empty_desc")}
             </p>
           </div>
         ) : (
@@ -347,10 +349,10 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
                   </p>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
                     <span style={{ fontSize: 10, color: "#D68C70", fontWeight: 600, display: "flex", alignItems: "center", gap: 3 }}>
-                      <Trophy size={11} /> {user.points} pts
+                      <Trophy size={11} /> {user.points} {t("search_pts")}
                     </span>
                     <span style={{ fontSize: 10, color: "#7A8A7B" }}>
-                      • {user.streakDays}d streak
+                      • {user.streakDays}d {t("profile_streak").toLowerCase()}
                     </span>
                   </div>
                 </div>
@@ -379,12 +381,12 @@ export function SearchUsersScreen({ onBack }: { onBack: () => void }) {
                 {user.isFollowing ? (
                   <>
                     <UserCheck size={14} color="#3E5C43" />
-                    <span>Seguindo</span>
+                    <span>{t("user_following")}</span>
                   </>
                 ) : (
                   <>
                     <UserPlus size={14} color="#FDFBF7" />
-                    <span>Seguir</span>
+                    <span>{t("user_follow")}</span>
                   </>
                 )}
               </button>

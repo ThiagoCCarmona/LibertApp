@@ -320,7 +320,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
               justifyContent: "center",
               cursor: "pointer",
             }}
-            aria-label="Fechar"
+            aria-label={t("common_close")}
           >
             <X size={18} color="#2D3A2E" />
           </button>
@@ -355,7 +355,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
                 border: "2px solid #FDFBF7",
               }}
             >
-              Nv {profileDetails?.level || user.level}
+              {t("user_level_badge")} {profileDetails?.level || user.level}
             </span>
           </div>
 
@@ -461,14 +461,14 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
               gap: 6,
             }}
           >
-            <ImageIcon size={15} color="#D68C70" /> Publicações no Mural ({userPosts.length})
+            <ImageIcon size={15} color="#D68C70" /> {t("user_wall_posts")} ({userPosts.length})
           </h3>
 
           {loadingPosts ? (
-            <p style={{ fontSize: 12, color: "#7A8A7B", textAlign: "center", padding: "10px 0" }}>Carregando publicações...</p>
+            <p style={{ fontSize: 12, color: "#7A8A7B", textAlign: "center", padding: "10px 0" }}>{t("user_loading_posts")}</p>
           ) : userPosts.length === 0 ? (
             <div style={{ background: "#F5EFE3", borderRadius: 12, padding: "14px", textAlign: "center" }}>
-              <p style={{ fontSize: 12, color: "#7A8A7B", margin: 0 }}>Nenhuma publicação feita ainda por este colega.</p>
+              <p style={{ fontSize: 12, color: "#7A8A7B", margin: 0 }}>{t("user_no_posts")}</p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -499,8 +499,8 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
                   <p style={{ fontSize: 12, color: "#2D3A2E", margin: 0, lineHeight: 1.4 }}>{p.content}</p>
 
                   <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#7A8A7B", marginTop: 2 }}>
-                    <span>❤️ {p.likes || 0} curtidas</span>
-                    <span>💬 {p.comments || 0} comentários</span>
+                    <span>❤️ {p.likes || 0} {t("user_likes_count")}</span>
+                    <span>💬 {p.comments || 0} {t("user_comments_count")}</span>
                   </div>
                 </div>
               ))}
@@ -521,7 +521,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
               gap: 6,
             }}
           >
-            <Award size={15} color="#D68C70" /> Conquistas em Destaque
+            <Award size={15} color="#D68C70" /> {t("user_featured_achievements")}
           </h3>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -600,7 +600,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
           >
             {incentiveSent ? (
               <>
-                <Check size={16} /> Incentivo enviado! 🎉
+                <Check size={16} /> {t("user_incentive_sent_alert")}
               </>
             ) : remainingIncentives === 0 ? (
               <>

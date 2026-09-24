@@ -3,6 +3,7 @@ import { X, Send, Heart, Trash2, MessageCircle } from "lucide-react";
 import { sendNativeMessage } from "../../services/nativeBridge";
 import { apiService } from "../../services/apiService";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
+import { useTranslation } from "../../i18n";
 
 export interface CommentItem {
   id: number;
@@ -34,6 +35,7 @@ export function PostCommentsModal({
   onAddComment,
   onDeleteComment,
 }: PostCommentsModalProps) {
+  const { t } = useTranslation();
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [newCommentText, setNewCommentText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -284,7 +286,7 @@ export function PostCommentsModal({
                 margin: 0,
               }}
             >
-              Comentários
+              {t("comments_modal_title")}
             </h2>
             <span
               style={{
@@ -313,7 +315,7 @@ export function PostCommentsModal({
               justifyContent: "center",
               cursor: "pointer",
             }}
-            aria-label="Fechar"
+            aria-label={t("common_close")}
           >
             <X size={18} color="#2D3A2E" />
           </button>
@@ -330,7 +332,7 @@ export function PostCommentsModal({
           }}
         >
           <p style={{ fontSize: 11, fontWeight: 600, color: "#D68C70", margin: "0 0 2px 0" }}>
-            Post de {postAuthor}
+            {t("comments_post_by")} {postAuthor}
           </p>
           <p
             style={{
@@ -359,7 +361,7 @@ export function PostCommentsModal({
         >
           {isLoading ? (
             <div style={{ textAlign: "center", padding: "40px 20px" }}>
-              <p style={{ fontSize: 13, color: "#7A8A7B" }}>Carregando comentários...</p>
+              <p style={{ fontSize: 13, color: "#7A8A7B" }}>{t("common_loading")}</p>
             </div>
           ) : comments.length === 0 ? (
             <div
@@ -387,10 +389,10 @@ export function PostCommentsModal({
                 <MessageCircle size={24} />
               </div>
               <p style={{ fontSize: 14, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>
-                Nenhum comentário ainda
+                {t("comments_empty_title")}
               </p>
               <p style={{ fontSize: 12, color: "#7A8A7B", margin: 0, maxWidth: 260 }}>
-                Seja a primeira pessoa a deixar uma palavra de incentivo e presença para este momento!
+                {t("comments_empty_sub")}
               </p>
             </div>
           ) : (
@@ -477,7 +479,9 @@ export function PostCommentsModal({
                             color: c.liked ? "#E06D53" : "#7A8A7B",
                           }}
                         >
-                          {c.likes > 0 ? `${c.likes} ${c.likes === 1 ? "curtida" : "curtidas"}` : "Curtir"}
+                          {c.likes > 0
+                            ? `${c.likes} ${c.likes === 1 ? t("feed_likes_singular") : t("feed_likes_plural")}`
+                            : t("feed_like_btn")}
                         </span>
                       </button>
                     </div>
@@ -508,7 +512,7 @@ export function PostCommentsModal({
                 handleSend();
               }
             }}
-            placeholder="Deixe uma palavra de incentivo..."
+            placeholder={t("comments_placeholder")}
             disabled={isSending}
             style={{
               flex: 1,
@@ -538,7 +542,7 @@ export function PostCommentsModal({
               cursor: newCommentText.trim() && !isSending ? "pointer" : "default",
               transition: "all 0.15s ease",
             }}
-            aria-label="Enviar comentário"
+            aria-label={t("comments_send_btn")}
           >
             <Send size={16} color="#FDFBF7" />
           </button>

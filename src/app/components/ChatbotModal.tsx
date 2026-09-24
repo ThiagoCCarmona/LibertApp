@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Send, Bot, RotateCcw, Sparkles } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { useTranslation } from "../../i18n";
 
 interface ChatMessage {
   id: string;
@@ -16,14 +17,30 @@ interface ChatbotModalProps {
   userName?: string;
 }
 
-const SUGGESTED_QUESTIONS = [
-  "Como reduzir meu tempo de tela sem perder o foco?",
-  "Dicas para organizar pausas ativas nos estudos",
-  "Como a respiração consciente ajuda na ansiedade digital?",
-  "O que fazer quando sinto vontade incontrolável de checar o celular?",
-];
+const SUGGESTED_QUESTIONS_MAP: Record<string, string[]> = {
+  pt: [
+    "Como reduzir meu tempo de tela sem perder o foco?",
+    "Dicas para organizar pausas ativas nos estudos",
+    "Como a respiração consciente ajuda na ansiedade digital?",
+    "O que fazer quando sinto vontade incontrolável de checar o celular?",
+  ],
+  en: [
+    "How to reduce screen time without losing focus?",
+    "Tips for active study breaks",
+    "How does mindful breathing help digital anxiety?",
+    "What to do when feeling the urge to check my phone?",
+  ],
+  es: [
+    "¿Cómo reducir el tiempo de pantalla sin perder el enfoque?",
+    "Consejos para pausas activas durante el estudio",
+    "¿Cómo ayuda la respiración consciente con la ansiedad digital?",
+    "¿Qué hacer ante el impulso incontrolable de revisar el móvil?",
+  ],
+};
 
 export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotModalProps) {
+  const { t, language } = useTranslation();
+  const suggestedQuestions = SUGGESTED_QUESTIONS_MAP[language] || SUGGESTED_QUESTIONS_MAP.pt;
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
       const saved = localStorage.getItem(`libertapp_chat_${userId}`);
@@ -97,7 +114,7 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
 
     // Render pode demorar alguns segundos caso esteja em cold start
     const coldStartTimer = setTimeout(() => {
-      setStatusNote("Conectando ao conselheiro virtual...");
+      setStatusNote(t("chatbot_connecting"));
     }, 3500);
 
     try {
@@ -124,7 +141,7 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
       const botMsg: ChatMessage = {
         id: `bot_${Date.now()}`,
         sender: "bot",
-        text: botReply || "Estou aqui com você. Como podemos continuar?",
+        text: botReply || "...",
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
 
@@ -136,7 +153,7 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
       const errorMsg: ChatMessage = {
         id: `bot_err_${Date.now()}`,
         sender: "bot",
-        text: "Parece que houve uma oscilação na conexão com o conselheiro. Por favor, tente enviar novamente em alguns instantes. Lembre-se: respire fundo e faça uma pausa consciente se necessário.",
+        text: t("chatbot_error_retry"),
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -147,7 +164,7 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
   };
 
   const handleResetChat = async () => {
-    const confirmReset = window.confirm("Deseja reiniciar a conversa com o conselheiro virtual?");
+    const confirmReset = window.confirm(t("chatbot_clear") + "?");
     if (!confirmReset) return;
 
     try {
@@ -162,8 +179,8 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
       {
         id: `welcome_${Date.now()}`,
         sender: "bot",
-        text: "Histórico reiniciado! Em que posso te ajudar a desacelerar e focar agora?",
-        time: "Agora",
+        text: t("chatbot_welcome"),
+        time: t("time_now"),
       },
     ];
 
@@ -249,7 +266,7 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
                     margin: 0,
                   }}
                 >
-                  Conselheiro Virtual
+                  {t("chatbot_title")}
                 </h2>
                 <span
                   style={{
@@ -266,7 +283,7 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
                 </span>
               </div>
               <p style={{ fontSize: 11, color: "#7A8A7B", margin: "1px 0 0 0" }}>
-                Hábitos Saudáveis & Bem-estar Digital
+                {t("chatbot_assistant_tag")}
               </p>
             </div>
           </div>
@@ -286,8 +303,8 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
                 cursor: "pointer",
                 color: "#7A8A7B",
               }}
-              title="Reiniciar conversa"
-              aria-label="Reiniciar conversa"
+              title={t("chatbot_clear")}
+              aria-label={t("chatbot_clear")}
             >
               <RotateCcw size={18} />
             </button>
@@ -306,7 +323,7 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
                 cursor: "pointer",
                 color: "#2D3A2E",
               }}
-              aria-label="Fechar"
+              aria-label={t("common_close")}
             >
               <X size={18} />
             </button>
@@ -326,7 +343,7 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
               whiteSpace: "nowrap",
             }}
           >
-            {SUGGESTED_QUESTIONS.map((q, idx) => (
+            {suggestedQuestions.map((q, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSendMessage(q)}
@@ -484,7 +501,7 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
                 handleSendMessage();
               }
             }}
-            placeholder="Pergunte ao conselheiro sobre foco e rotina..."
+            placeholder={t("chatbot_placeholder")}
             disabled={isLoading}
             style={{
               flex: 1,
@@ -519,7 +536,7 @@ export function ChatbotModal({ isOpen, onClose, userId = 1, userName }: ChatbotM
                 : "none",
               transition: "all 0.15s ease",
             }}
-            aria-label="Enviar mensagem"
+            aria-label={t("comments_send_btn")}
           >
             <Send size={18} color="#FDFBF7" />
           </button>

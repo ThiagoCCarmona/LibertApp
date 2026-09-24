@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Award, Settings2, Plus, Trash2, Edit2, CheckCircle } from "lucide-react";
 import { apiService, type ConquistaDto, type ConquistaAdminDto } from "../../services/apiService";
+import { useTranslation } from "../../i18n";
 
 interface AchievementsModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ const TIPOS = [
 const emptyForm = { titulo: "", descricao: "", icone: "🏅", tipo: "pontos", meta: 10, pontosRecompensa: 20 };
 
 export function AchievementsModal({ isOpen, onClose, usuarioId, isAdmin }: AchievementsModalProps) {
+  const { t } = useTranslation();
   const [conquistas, setConquistas] = useState<ConquistaDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
@@ -177,10 +179,10 @@ export function AchievementsModal({ isOpen, onClose, usuarioId, isAdmin }: Achie
             </div>
             <div>
               <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>
-                Conquistas
+                {t("achievements_modal_title")}
               </h2>
               <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>
-                {conquistas.filter((c) => c.desbloqueada).length}/{conquistas.length} desbloqueadas
+                {conquistas.filter((c) => c.desbloqueada).length}/{conquistas.length} {t("achievements_unlocked_count")}
               </p>
             </div>
           </div>
@@ -189,8 +191,8 @@ export function AchievementsModal({ isOpen, onClose, usuarioId, isAdmin }: Achie
             {isAdmin && (
               <button
                 onClick={handleToggleAdmin}
-                title="Gerenciar conquistas"
-                aria-label="Gerenciar conquistas"
+                title={t("achievements_manage_btn")}
+                aria-label={t("achievements_manage_btn")}
                 style={{
                   background: showAdmin ? "#2D3A2E" : "#F5EFE3",
                   border: "none",
@@ -209,7 +211,7 @@ export function AchievementsModal({ isOpen, onClose, usuarioId, isAdmin }: Achie
             <button
               onClick={onClose}
               style={{ background: "#F5EFE3", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-              aria-label="Fechar"
+              aria-label={t("common_close")}
             >
               <X size={18} color="#2D3A2E" />
             </button>
@@ -228,7 +230,7 @@ export function AchievementsModal({ isOpen, onClose, usuarioId, isAdmin }: Achie
           {isAdmin && showAdmin && (
             <div style={{ marginBottom: 16, background: "#F5EFE3", borderRadius: 16, padding: 14, border: "1px solid rgba(45,58,46,0.08)" }}>
               <h3 style={{ fontSize: 13, fontWeight: 700, color: "#2D3A2E", margin: "0 0 10px 0" }}>
-                {editingId ? "Editar Conquista" : "Nova Conquista"}
+                {editingId ? t("achievements_admin_edit") : t("achievements_admin_new")}
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <input style={inputStyle} placeholder="Título" value={form.titulo} onChange={(e) => setForm((f) => ({ ...f, titulo: e.target.value }))} />
@@ -254,19 +256,19 @@ export function AchievementsModal({ isOpen, onClose, usuarioId, isAdmin }: Achie
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
                   {editingId && (
                     <button onClick={resetForm} style={{ background: "#EDE7DA", border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#2D3A2E" }}>
-                      Cancelar
+                      {t("common_cancel")}
                     </button>
                   )}
                   <button onClick={handleSubmit} style={{ background: "#2D3A2E", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#FDFBF7", display: "flex", alignItems: "center", gap: 6 }}>
                     <Plus size={14} />
-                    {editingId ? "Salvar" : "Criar"}
+                    {editingId ? t("common_save") : "+"}
                   </button>
                 </div>
               </div>
 
               <div style={{ marginTop: 14, borderTop: "1px solid rgba(45,58,46,0.1)", paddingTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
                 {isAdminLoading ? (
-                  <p style={{ fontSize: 12, color: "#7A8A7B" }}>Carregando...</p>
+                  <p style={{ fontSize: 12, color: "#7A8A7B" }}>{t("common_loading")}</p>
                 ) : (
                   adminList.map((c) => (
                     <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#FAF7F0", borderRadius: 10, padding: "8px 10px", opacity: c.ativo ? 1 : 0.55 }}>
@@ -294,11 +296,11 @@ export function AchievementsModal({ isOpen, onClose, usuarioId, isAdmin }: Achie
           {/* Lista de conquistas com progresso */}
           {isLoading ? (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
-              <p style={{ fontSize: 13, color: "#7A8A7B" }}>Carregando conquistas...</p>
+              <p style={{ fontSize: 13, color: "#7A8A7B" }}>{t("achievements_loading")}</p>
             </div>
           ) : conquistas.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
-              <p style={{ fontSize: 13, color: "#7A8A7B" }}>Nenhuma conquista disponível no momento.</p>
+              <p style={{ fontSize: 13, color: "#7A8A7B" }}>{t("achievements_none")}</p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

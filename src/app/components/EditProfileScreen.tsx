@@ -3,8 +3,10 @@ import { ChevronLeft, Upload, MapPin, Loader2, Camera, Image as ImageIcon } from
 import { sendNativeMessage, isMauiHybrid, getCurrentLocation, requestLocationPermission, pickNativeImage } from "../../services/nativeBridge";
 import { apiService } from "../../services/apiService";
 import { DEFAULT_AVATARS, DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
+import { useTranslation } from "../../i18n";
 
 export function EditProfileScreen({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -335,12 +337,12 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
               alignItems: "center",
               justifyContent: "center",
             }}
-            aria-label="Voltar"
+            aria-label={t("profile_refresh")}
           >
             <ChevronLeft size={24} color="#2D3A2E" />
           </button>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", margin: 0 }}>
-            Editar Perfil
+            {t("edit_screen_title")}
           </h1>
         </div>
 
@@ -367,8 +369,8 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
             <button
               type="button"
               onClick={handlePhotoClick}
-              title="Fazer upload de foto"
-              aria-label="Fazer upload de foto de perfil"
+              title={t("edit_change_photo")}
+              aria-label={t("edit_change_photo")}
               style={{
                 position: "absolute",
                 bottom: 0,
@@ -425,7 +427,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
             ))}
           </div>
           <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 4 }}>
-            Escolha um ícone acima ou toque no botão preto para enviar foto
+            {t("auth_upload_custom_photo")}
           </p>
         </div>
 
@@ -434,7 +436,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
           {/* Full Name */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
-              Nome Completo
+              {t("edit_fullname")}
             </label>
             <input
               type="text"
@@ -450,14 +452,14 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
                 fontFamily: "'DM Sans', sans-serif",
                 boxSizing: "border-box",
               }}
-              placeholder="Nome completo"
+              placeholder={t("edit_fullname")}
             />
           </div>
 
           {/* Email */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
-              E-mail
+              {t("edit_email")}
             </label>
             <input
               type="email"
@@ -473,14 +475,14 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
                 fontFamily: "'DM Sans', sans-serif",
                 boxSizing: "border-box",
               }}
-              placeholder="E-mail"
+              placeholder={t("edit_email")}
             />
           </div>
 
           {/* Phone */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
-              Telefone
+              {t("edit_phone")}
             </label>
             <input
               type="text"
@@ -503,7 +505,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
           {/* CPF */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
-              CPF
+              {t("edit_cpf")}
             </label>
             <input
               type="text"
@@ -526,7 +528,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
           {/* Location */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "#2D3A2E", display: "block", marginBottom: 6 }}>
-              Localização
+              {t("edit_city")}
             </label>
             <div style={{ display: "flex", gap: 8 }}>
               <input
@@ -547,14 +549,14 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
                   fontFamily: "'DM Sans', sans-serif",
                   boxSizing: "border-box",
                 }}
-                placeholder="Cidade, Estado, País (opcional)"
+                placeholder={t("edit_city")}
               />
               <button
                 type="button"
                 onClick={handleUseCurrentLocation}
                 disabled={isLocating}
-                title="Usar minha localização atual"
-                aria-label="Usar minha localização atual"
+                title={t("edit_detect_location")}
+                aria-label={t("edit_detect_location")}
                 style={{
                   flexShrink: 0,
                   width: 44,
@@ -577,7 +579,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
               </button>
             </div>
             <p style={{ fontSize: 11, color: locationError ? "#C44F35" : "#7A8A7B", marginTop: 6 }}>
-              {locationError || "Deixe em branco ou toque no ícone para preencher com sua localização atual."}
+              {locationError || t("edit_detect_location")}
             </p>
           </div>
         </div>
@@ -606,7 +608,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
               : "0 8px 24px rgba(214,140,112,0.3)",
           }}
         >
-          {saved ? "✓ Salvo com sucesso!" : "Salvar Alterações"}
+          {saved ? t("edit_success") : t("edit_save_btn")}
         </button>
       </div>
       {/* Modal de Escolha da Foto (Câmera ou Galeria) */}
@@ -641,10 +643,10 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
             <div style={{ textAlign: "center", marginBottom: 6 }}>
               <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(45,58,46,0.2)", margin: "0 auto 12px" }} />
               <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: "#2D3A2E", margin: 0 }}>
-                Foto de Perfil
+                {t("profile_photo_modal_title")}
               </h3>
               <p style={{ fontSize: 12, color: "#7A8A7B", marginTop: 4, margin: 0 }}>
-                Escolha como deseja adicionar sua foto
+                {t("profile_photo_modal_sub")}
               </p>
             </div>
 
@@ -668,7 +670,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
               <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(214,140,112,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Camera size={18} color="#D68C70" />
               </div>
-              <span>Tirar Foto com a Câmera</span>
+              <span>{t("profile_photo_camera")}</span>
             </button>
 
             <button
@@ -691,7 +693,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
               <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(107,143,109,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <ImageIcon size={18} color="#6B8F6D" />
               </div>
-              <span>Escolher da Galeria de Fotos</span>
+              <span>{t("profile_photo_gallery")}</span>
             </button>
 
             <button
@@ -709,7 +711,7 @@ export function EditProfileScreen({ onBack }: { onBack: () => void }) {
                 fontFamily: "'DM Sans', sans-serif",
               }}
             >
-              Cancelar
+              {t("profile_photo_cancel")}
             </button>
           </div>
         </div>

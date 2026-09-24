@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Search, Shield, Trash2, Key, CheckCircle, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
 import { apiService } from "../../services/apiService";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
+import { useTranslation } from "../../i18n";
 
 interface AdminUserItem {
   id: number;
@@ -28,6 +29,7 @@ interface AdminUsersModalProps {
 }
 
 export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalProps) {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -202,7 +204,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
                 Controle de Usuários
               </h2>
               <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>
-                Painel Administrativo do LibertApp • {users.length} usuários
+                {t("admin_users_title")} • {users.length} {t("admin_users_count")}
               </p>
             </div>
           </div>
@@ -220,7 +222,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
               justifyContent: "center",
               cursor: "pointer",
             }}
-            aria-label="Fechar painel"
+            aria-label={t("common_close")}
           >
             <X size={18} color="#2D3A2E" />
           </button>
@@ -264,7 +266,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Filtrar por nome, e-mail ou curso..."
+              placeholder={t("admin_search_placeholder")}
               style={{
                 width: "100%",
                 background: "transparent",
@@ -299,11 +301,11 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
         >
           {isLoading ? (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
-              <p style={{ fontSize: 13, color: "#7A8A7B" }}>Carregando cadastro de usuários...</p>
+              <p style={{ fontSize: 13, color: "#7A8A7B" }}>{t("admin_loading_users")}</p>
             </div>
           ) : filteredUsers.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
-              <p style={{ fontSize: 13, color: "#7A8A7B" }}>Nenhum usuário encontrado para a busca.</p>
+              <p style={{ fontSize: 13, color: "#7A8A7B" }}>{t("admin_no_users_found")}</p>
             </div>
           ) : (
             filteredUsers.map((u) => {
@@ -367,7 +369,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
                             textOverflow: "ellipsis",
                           }}
                         >
-                          {u.nome} {isCurrentAdmin && "(Você)"}
+                          {u.nome} {isCurrentAdmin && `(${t("user_you")})`}
                         </p>
                         <span
                           style={{
@@ -379,7 +381,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
                             color: u.ativo ? "#2E7D32" : "#C62828",
                           }}
                         >
-                          {u.ativo ? "ATIVO" : "DESATIVADO"}
+                          {u.ativo ? t("admin_status_active") : t("admin_status_inactive")}
                         </span>
                       </div>
 
@@ -430,7 +432,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
                         }}
                       >
                         <Key size={13} color="#D68C70" />
-                        <span>Trocar Senha</span>
+                        <span>{t("admin_change_password")}</span>
                       </button>
 
                       {/* Desativar / Ativar */}
@@ -451,7 +453,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
                         }}
                       >
                         {u.ativo ? <XCircle size={13} /> : <CheckCircle size={13} />}
-                        <span>{u.ativo ? "Desativar" : "Ativar"}</span>
+                        <span>{u.ativo ? t("admin_deactivate") : t("admin_activate")}</span>
                       </button>
 
                       {/* Excluir */}
@@ -470,7 +472,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
                           alignItems: "center",
                           gap: 4,
                         }}
-                        title="Excluir usuário do sistema"
+                        title={t("admin_delete_user")}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -507,7 +509,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
               }}
             >
               <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 16, margin: "0 0 8px 0", color: "#2D3A2E" }}>
-                Redefinir Senha
+                {t("admin_reset_password")}
               </h3>
               <p style={{ fontSize: 12, color: "#7A8A7B", margin: "0 0 14px 0" }}>
                 Defina a nova senha de acesso para <strong>{selectedUserForPassword.nome}</strong>:
@@ -517,7 +519,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
                 type="text"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Digite a nova senha..."
+                placeholder="••••••"
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -544,7 +546,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
                     color: "#2D3A2E",
                   }}
                 >
-                  Cancelar
+                  {t("common_cancel")}
                 </button>
                 <button
                   onClick={handleConfirmResetPassword}
@@ -560,7 +562,7 @@ export function AdminUsersModal({ isOpen, onClose, callerId }: AdminUsersModalPr
                     color: "#FDFBF7",
                   }}
                 >
-                  {isResettingPassword ? "Salvando..." : "Salvar Senha"}
+                  {isResettingPassword ? t("common_loading") : t("common_save")}
                 </button>
               </div>
             </div>
