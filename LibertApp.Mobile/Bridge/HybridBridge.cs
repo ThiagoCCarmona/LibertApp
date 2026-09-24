@@ -100,6 +100,7 @@ public class HybridBridge
                 "REQUEST_MEDIA_PERMISSION" => await HandleRequestMediaPermission(message.Payload),
                 "PICK_IMAGE" => await HandlePickImage(false),
                 "CAPTURE_PHOTO" => await HandlePickImage(true),
+                "SCHEDULE_BACKGROUND_REMINDERS" => HandleScheduleBackgroundReminders(message.Payload),
                 _ => throw new InvalidOperationException($"Unknown action: {message.Action}")
             };
 
@@ -425,5 +426,27 @@ public class HybridBridge
             dataUrl = $"data:{contentType};base64,{base64}",
             fileName = photo.FileName
         };
+    }
+
+    private object? HandleScheduleBackgroundReminders(string? payload)
+    {
+#if ANDROID
+        try
+        {
+            var doc = JsonSerializer.Deserialize<JsonElement>(payload ?? "{}");
+            int userId = doc.TryGetProperty("userId", out var u) ? u.GetInt32() : 0;
+            bool breathingEnabled = !doc.TryGetProperty("breathingEnabled", out var b) || b.GetBoolean();
+            int breathingIntervalMin = doc.TryGetProperty("breathingIntervalMin", out var i) ? i.GetInt32() : 120;
+            bool nightMode = doc.TryGetProperty("nightMode", out var n) && n.GetBoolean();
+            string nightModeStart = doc.TryGetProperty("nightModeStart", out var ns) ? ns.GetString() ?? "22:00" : "22:00";
+            string nightModeEnd = doc.TryGetProperty("nightModeEnd", out var ne) ? ne.GetString() ?? "07:00" : "07:00";
+
+            LibertApp.Mobile.Platforms.Android.BackgroundNotificationManager.SaveSettings(
+                userId, breathingEnabled, breathingIntervalMin, nightMode, nightModeStart, nightModeEnd);
+            LibertApp.Mobile.Platforms.Android.BackgroundNotificationManager.ScheduleAll(global::Android.App.Application.Context);
+        }
+        catch { }
+#endif
+        return new { success = true };
     }
 }

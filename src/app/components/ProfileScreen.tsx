@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Bell, Moon, Smartphone, LogOut, Shield, Trash2, Image as ImageIcon, Award, Users, MapPin, Camera, CheckCircle2, AlertCircle, ExternalLink, RefreshCw, Clock, ChevronDown, X } from "lucide-react";
+import { Bell, Moon, Smartphone, LogOut, Shield, Trash2, Image as ImageIcon, Award, Users, MapPin, Camera, CheckCircle2, AlertCircle, ExternalLink, RefreshCw, Clock, ChevronDown, X, Globe } from "lucide-react";
 import {
   sendNativeMessage,
   isMauiHybrid,
@@ -19,6 +19,7 @@ import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 import { AdminUsersModal } from "./AdminUsersModal";
 import { AchievementsModal } from "./AchievementsModal";
 import { restartBreathingSchedule, notify } from "../../services/notificationScheduler";
+import { useTranslation } from "../../i18n";
 
 const BREATHING_INTERVAL_OPTIONS = [
   { value: 30, label: "A cada 30 min" },
@@ -173,7 +174,24 @@ export function ProfileScreen({
   const [prioritizeFollowing, setPrioritizeFollowing] = React.useState(() => {
     return localStorage.getItem("pref_feed_following_first") !== "false";
   });
+  const { t, language, setLanguage } = useTranslation();
   const [isAchievementsOpen, setIsAchievementsOpen] = React.useState(false);
+
+  const syncBackgroundSettings = React.useCallback((overrides?: any) => {
+    const payload = {
+      userId: currentUser?.id || 0,
+      breathingEnabled: overrides?.breathingReminders ?? breathingReminders,
+      breathingIntervalMin: overrides?.breathingIntervalMin ?? breathingIntervalMin,
+      nightMode: overrides?.nightMode ?? nightMode,
+      nightModeStart: overrides?.nightModeStart ?? nightModeStart,
+      nightModeEnd: overrides?.nightModeEnd ?? nightModeEnd,
+    };
+    sendNativeMessage("SCHEDULE_BACKGROUND_REMINDERS", payload).catch(() => {});
+  }, [currentUser, breathingReminders, breathingIntervalMin, nightMode, nightModeStart, nightModeEnd]);
+
+  React.useEffect(() => {
+    syncBackgroundSettings();
+  }, [currentUser]);
 
   const [hasUsageAccess, setHasUsageAccess] = React.useState<boolean>(() => localStorage.getItem("perm_usage") === "true");
   const [hasNotificationPermission, setHasNotificationPermission] = React.useState<boolean>(() => localStorage.getItem("perm_notification") === "true");
@@ -394,17 +412,20 @@ export function ProfileScreen({
       if (granted) localStorage.setItem("perm_notification", "true");
     }
     restartBreathingSchedule();
+    syncBackgroundSettings({ breathingReminders: val });
   };
 
   const handleChangeBreathingInterval = (val: number) => {
     setBreathingIntervalMin(val);
     localStorage.setItem("pref_breathing_interval", String(val));
     restartBreathingSchedule();
+    syncBackgroundSettings({ breathingIntervalMin: val });
   };
 
   const handleToggleNightMode = async (val: boolean) => {
     setNightMode(val);
     localStorage.setItem("pref_nightmode", String(val));
+    syncBackgroundSettings({ nightMode: val });
 
     // Ativa/desativa o "Não Perturbar" do sistema (somente Android, requer permissão especial)
     try {
@@ -435,11 +456,13 @@ export function ProfileScreen({
   const handleChangeNightModeStart = (val: string) => {
     setNightModeStart(val);
     localStorage.setItem("pref_nightmode_start", val);
+    syncBackgroundSettings({ nightModeStart: val });
   };
 
   const handleChangeNightModeEnd = (val: string) => {
     setNightModeEnd(val);
     localStorage.setItem("pref_nightmode_end", val);
+    syncBackgroundSettings({ nightModeEnd: val });
   };
 
   const handleToggleScreenLimit = async (val: boolean) => {
@@ -846,7 +869,7 @@ export function ProfileScreen({
               transition: "all 0.2s",
             }}
           >
-            ✏️ Editar Perfil
+            ✏️ {t("profile_edit")}
           </button>
           <button
             onClick={onLogout}
@@ -871,7 +894,7 @@ export function ProfileScreen({
             aria-label="Logout"
             disabled={!onLogout}
           >
-            🚪 Sair
+            🚪 {t("profile_logout")}
           </button>
           <button
             onClick={onShowBenefits}
@@ -889,7 +912,7 @@ export function ProfileScreen({
               transition: "all 0.2s",
             }}
           >
-            🎁 Benefícios
+            🎁 {t("nav_benefits")}
           </button>
           <button
             onClick={onOpenCard}
@@ -907,7 +930,7 @@ export function ProfileScreen({
               transition: "all 0.2s",
             }}
           >
-            🪪 Ver Carteirinha
+            🪪 {t("card_view_digital")}
           </button>
         </div>
 
@@ -933,7 +956,7 @@ export function ProfileScreen({
                   <Award size={18} color="#D68C70" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "#2D3A2E", margin: 0 }}>Minhas Conquistas</h3>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "#2D3A2E", margin: 0 }}>{t("profile_achievements_title")}</h3>
                   <p style={{ fontSize: 11, color: "#7A8A7B", margin: "2px 0 0 0" }}>
                     {conquistas.filter((c) => c.desbloqueada).length} de {conquistas.length} desbloqueadas
                   </p>
@@ -951,7 +974,7 @@ export function ProfileScreen({
                   padding: "4px 8px",
                 }}
               >
-                Ver todas →
+                {t("profile_view_all")} →
               </button>
             </div>
 
@@ -1130,10 +1153,72 @@ export function ProfileScreen({
         {/* Alert Configuration Section */}
         <div className="px-6 pb-6">
           <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 18, color: "#2D3A2E", marginBottom: 12 }}>
-            Configuração de Alertas e Pausas
+            {t("profile_settings_title")}
           </h2>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Language Switcher */}
+            <div style={{
+              background: "#F5EFE3",
+              borderRadius: 14,
+              padding: "14px 16px",
+              border: "1px solid rgba(45,58,46,0.08)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: "rgba(91,123,107,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    <Globe size={18} color="#5B7B6B" />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>{t("profile_language_title")}</p>
+                    <p style={{ fontSize: 11, color: "#7A8A7B", margin: "2px 0 0 0" }}>{t("profile_language_sub")}</p>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {[
+                  { code: "pt", label: "Português", flag: "🇧🇷" },
+                  { code: "en", label: "English", flag: "🇺🇸" },
+                  { code: "es", label: "Español", flag: "🇪🇸" },
+                ].map((item) => {
+                  const isActive = language === item.code;
+                  return (
+                    <button
+                      key={item.code}
+                      type="button"
+                      onClick={() => setLanguage(item.code as any)}
+                      style={{
+                        padding: "8px 6px",
+                        borderRadius: 10,
+                        border: isActive ? "2px solid #5B7B6B" : "1px solid rgba(45,58,46,0.12)",
+                        background: isActive ? "rgba(91,123,107,0.15)" : "#FDFBF7",
+                        color: isActive ? "#2D3A2E" : "#7A8A7B",
+                        fontWeight: isActive ? 700 : 500,
+                        fontSize: 12,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <span style={{ fontSize: 14 }}>{item.flag}</span>
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Prioritize Following in Feed */}
             <div style={{
               background: "#F5EFE3",
@@ -1184,8 +1269,8 @@ export function ProfileScreen({
                     <Shield size={18} color="#6B8F6D" />
                   </div>
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>Permissões do Dispositivo</p>
-                    <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>Integração nativa com Web / Mobile</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E", margin: 0 }}>{t("profile_permissions_title")}</p>
+                    <p style={{ fontSize: 11, color: "#7A8A7B", margin: 0 }}>{t("profile_permissions_sub")}</p>
                   </div>
                 </div>
                 <button
@@ -1215,15 +1300,15 @@ export function ProfileScreen({
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <Bell size={15} color="#D68C70" />
                     <div>
-                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>Notificações</span>
-                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>Lembretes e avisos do app</p>
+                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>{t("profile_perm_notifications")}</span>
+                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>{t("profile_perm_notifications_desc")}</p>
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     {hasNotificationPermission ? (
                       <>
                         <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "#6B8F6D", fontWeight: 600 }}>
-                          <CheckCircle2 size={13} /> Ativo
+                          <CheckCircle2 size={13} /> {t("profile_active")}
                         </span>
                         <button
                           onClick={handleTestNotification}
@@ -1238,7 +1323,7 @@ export function ProfileScreen({
                             cursor: "pointer",
                           }}
                         >
-                          {isTestingNotification ? "Enviando..." : "Testar"}
+                          {isTestingNotification ? "..." : t("profile_test")}
                         </button>
                       </>
                     ) : (
@@ -1255,7 +1340,7 @@ export function ProfileScreen({
                           cursor: "pointer",
                         }}
                       >
-                        Autorizar
+                        {t("profile_authorize")}
                       </button>
                     )}
                   </div>
@@ -1266,14 +1351,14 @@ export function ProfileScreen({
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <Smartphone size={15} color="#6B8F6D" />
                     <div>
-                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>Acesso de Uso</span>
-                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>Tempo de tela real no Android</p>
+                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>{t("profile_perm_usage")}</span>
+                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>{t("profile_perm_usage_desc")}</p>
                     </div>
                   </div>
                   <div>
                     {hasUsageAccess ? (
                       <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "#6B8F6D", fontWeight: 600 }}>
-                        <CheckCircle2 size={13} /> Liberado
+                        <CheckCircle2 size={13} /> {t("profile_granted")}
                       </span>
                     ) : (
                       <button
@@ -1289,7 +1374,7 @@ export function ProfileScreen({
                           cursor: "pointer",
                         }}
                       >
-                        Liberar Acesso
+                        {t("profile_authorize")}
                       </button>
                     )}
                   </div>
@@ -1300,14 +1385,14 @@ export function ProfileScreen({
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <MapPin size={15} color="#D68C70" />
                     <div>
-                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>Localização GPS</span>
-                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>Cidade no perfil do usuário</p>
+                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>{t("profile_perm_location")}</span>
+                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>{t("profile_perm_location_desc")}</p>
                     </div>
                   </div>
                   <div>
                     {hasLocationPermission ? (
                       <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "#6B8F6D", fontWeight: 600 }}>
-                        <CheckCircle2 size={13} /> Ativo
+                        <CheckCircle2 size={13} /> {t("profile_active")}
                       </span>
                     ) : (
                       <button
@@ -1323,7 +1408,7 @@ export function ProfileScreen({
                           cursor: "pointer",
                         }}
                       >
-                        Autorizar
+                        {t("profile_authorize")}
                       </button>
                     )}
                   </div>
@@ -1334,14 +1419,14 @@ export function ProfileScreen({
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <Camera size={15} color="#6B8F6D" />
                     <div>
-                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>Câmera & Galeria</span>
-                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>Fotos de perfil e publicações</p>
+                      <span style={{ fontWeight: 600, color: "#2D3A2E" }}>{t("profile_perm_media")}</span>
+                      <p style={{ fontSize: 10.5, color: "#7A8A7B", margin: 0 }}>{t("profile_perm_media_desc")}</p>
                     </div>
                   </div>
                   <div>
                     {hasMediaPermission ? (
                       <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "#6B8F6D", fontWeight: 600 }}>
-                        <CheckCircle2 size={13} /> Liberado
+                        <CheckCircle2 size={13} /> {t("profile_granted")}
                       </span>
                     ) : (
                       <button
@@ -1357,7 +1442,7 @@ export function ProfileScreen({
                           cursor: "pointer",
                         }}
                       >
-                        Autorizar
+                        {t("profile_authorize")}
                       </button>
                     )}
                   </div>
@@ -1386,9 +1471,9 @@ export function ProfileScreen({
                     <Bell size={18} color="#D68C70" />
                   </div>
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E" }}>Lembretes de Respiro</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E" }}>{t("profile_breathing_title")}</p>
                     <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>
-                      {BREATHING_INTERVAL_OPTIONS.find((o) => o.value === breathingIntervalMin)?.label || "A cada 2 horas"}
+                      {BREATHING_INTERVAL_OPTIONS.find((o) => o.value === breathingIntervalMin)?.label || `${breathingIntervalMin} min`}
                     </p>
                   </div>
                 </div>
@@ -1397,7 +1482,7 @@ export function ProfileScreen({
               {breathingReminders && (
                 <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
                   <p style={{ fontSize: 11, fontWeight: 500, color: "#7A8A7B", margin: 0 }}>
-                    Frequência do lembrete:
+                    {t("profile_breathing_freq")}
                   </p>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
                     {BREATHING_INTERVAL_OPTIONS.map((o) => {
@@ -1439,7 +1524,7 @@ export function ProfileScreen({
                     justifyContent: "space-between",
                   }}>
                     <span style={{ fontSize: 11.5, color: "#2D3A2E", fontWeight: 500 }}>
-                      Tempo personalizado (min):
+                      {t("profile_breathing_custom")}
                     </span>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <button
@@ -1530,7 +1615,7 @@ export function ProfileScreen({
                     <Moon size={18} color="#6B8F6D" />
                   </div>
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E" }}>Modo Noturno Digital</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E" }}>{t("profile_night_title")}</p>
                     <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>{nightModeStart} - {nightModeEnd}</p>
                   </div>
                 </div>
@@ -1572,7 +1657,7 @@ export function ProfileScreen({
                       <ChevronDown size={14} color="#7A8A7B" style={{ pointerEvents: "none", flexShrink: 0 }} />
                     </div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "#7A8A7B" }}>até</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#7A8A7B" }}>-</span>
                   <div style={{ flex: 1, position: "relative" }}>
                     <div style={{
                       display: "flex",
@@ -1632,8 +1717,8 @@ export function ProfileScreen({
                     <Smartphone size={18} color="#C4A882" />
                   </div>
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E" }}>Limite de Tela Diário</p>
-                    <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>Meta: {dailyLimit}h por dia</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#2D3A2E" }}>{t("profile_screenlimit_title")}</p>
+                    <p style={{ fontSize: 11, color: "#7A8A7B", marginTop: 1 }}>Meta: {dailyLimit}h</p>
                   </div>
                 </div>
                 <ToggleSwitch enabled={screenTimeLimit} onChange={handleToggleScreenLimit} />
@@ -1754,10 +1839,10 @@ export function ProfileScreen({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div>
                 <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: "#2D3A2E", margin: 0 }}>
-                  Foto de Perfil
+                  {t("profile_photo_modal_title")}
                 </h3>
                 <p style={{ fontSize: 12, color: "#7A8A7B", margin: "2px 0 0 0" }}>
-                  Escolha como deseja atualizar sua foto
+                  {t("profile_photo_modal_sub")}
                 </p>
               </div>
               <button
@@ -1794,7 +1879,7 @@ export function ProfileScreen({
               <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(214,140,112,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Camera size={18} color="#D68C70" />
               </div>
-              <span>Tirar Foto com a Câmera</span>
+              <span>{t("profile_photo_camera")}</span>
             </button>
 
             <button
@@ -1817,7 +1902,7 @@ export function ProfileScreen({
               <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(107,143,109,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <ImageIcon size={18} color="#6B8F6D" />
               </div>
-              <span>Escolher da Galeria de Fotos</span>
+              <span>{t("profile_photo_gallery")}</span>
             </button>
 
             <button
@@ -1835,7 +1920,7 @@ export function ProfileScreen({
                 fontFamily: "'DM Sans', sans-serif",
               }}
             >
-              Cancelar
+              {t("profile_photo_cancel")}
             </button>
           </div>
         </div>

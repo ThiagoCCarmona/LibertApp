@@ -14,8 +14,12 @@
 	<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 	<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-	<!-- Necessárias para o relatório de tempo de tela (acesso de uso) e o modo noturno digital (política de notificações/DND) -->
 	<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 	<uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+	<!-- Necessárias para lembretes e notificações em segundo plano / app fechado -->
+	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+	<uses-permission android:name="android.permission.WAKE_LOCK" />
+	<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 </manifest>

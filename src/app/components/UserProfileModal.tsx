@@ -5,6 +5,7 @@ import { apiService } from "../../services/apiService";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
 import { notify } from "../../services/notificationScheduler";
 import { sendNativeMessage, sendNativeIncentive } from "../../services/nativeBridge";
+import { useTranslation } from "../../i18n";
 
 export interface UserProfileData {
   id?: number;
@@ -81,6 +82,7 @@ interface UserProfileModalProps {
 }
 
 export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: UserProfileModalProps) {
+  const { t } = useTranslation();
   const [incentiveSent, setIncentiveSent] = useState(false);
   const [following, setFollowing] = useState(user?.isFollowing ?? false);
   const [showUnfollowConfirm, setShowUnfollowConfirm] = useState(false);
@@ -414,7 +416,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
           >
             <Trophy size={18} color="#D68C70" style={{ margin: "0 auto 4px auto" }} />
             <p style={{ fontSize: 16, fontWeight: 700, color: "#2D3A2E", margin: 0 }}>{profileDetails?.points ?? user.points}</p>
-            <p style={{ fontSize: 10, color: "#7A8A7B", margin: 0 }}>Pontos</p>
+            <p style={{ fontSize: 10, color: "#7A8A7B", margin: 0 }}>{t("user_points")}</p>
           </div>
 
           <div
@@ -428,7 +430,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
           >
             <Clock size={18} color="#C4A882" style={{ margin: "0 auto 4px auto" }} />
             <p style={{ fontSize: 16, fontWeight: 700, color: "#2D3A2E", margin: 0 }}>{profileDetails?.focusMinutes ?? user.focusMinutes}m</p>
-            <p style={{ fontSize: 10, color: "#7A8A7B", margin: 0 }}>Foco Off</p>
+            <p style={{ fontSize: 10, color: "#7A8A7B", margin: 0 }}>{t("user_focus_time")}</p>
           </div>
 
           <div
@@ -442,7 +444,7 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
           >
             <Flame size={18} color="#E06D53" style={{ margin: "0 auto 4px auto" }} />
             <p style={{ fontSize: 16, fontWeight: 700, color: "#2D3A2E", margin: 0 }}>{profileDetails?.streakDays ?? user.streakDays}d</p>
-            <p style={{ fontSize: 10, color: "#7A8A7B", margin: 0 }}>Sequência</p>
+            <p style={{ fontSize: 10, color: "#7A8A7B", margin: 0 }}>{t("user_streak")}</p>
           </div>
         </div>
 
@@ -568,11 +570,11 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
           >
             {following ? (
               <>
-                <UserCheck size={16} color="#3E5C43" /> Seguindo
+                <UserCheck size={16} color="#3E5C43" /> {t("user_following")}
               </>
             ) : (
               <>
-                <UserPlus size={16} color="#FDFBF7" /> Seguir Colega
+                <UserPlus size={16} color="#FDFBF7" /> {t("user_follow")}
               </>
             )}
           </button>
@@ -602,11 +604,11 @@ export function UserProfileModal({ isOpen, onClose, user, onToggleFollow }: User
               </>
             ) : remainingIncentives === 0 ? (
               <>
-                <Clock size={16} color="#7A8A7B" /> Limite atingido (0/3 na hora)
+                <Clock size={16} color="#7A8A7B" /> {t("user_incentive_limit")}
               </>
             ) : (
               <>
-                <ThumbsUp size={16} color="#D68C70" /> Incentivar Colega ({remainingIncentives}/3)
+                <ThumbsUp size={16} color="#D68C70" /> {t("user_incentive_btn")} ({remainingIncentives}/3)
               </>
             )}
           </button>

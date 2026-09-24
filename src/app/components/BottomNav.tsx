@@ -1,12 +1,15 @@
 import { Home, Activity, User } from "lucide-react";
+import { useTranslation } from "../../i18n";
 
 type Tab = "home" | "activities" | "profile";
 
 export function BottomNav({ activeTab, onTabChange }: { activeTab: Tab; onTabChange: (tab: Tab) => void }) {
+  const { t } = useTranslation();
+
   const tabs = [
-    { id: "home" as Tab, icon: Home, label: "Início" },
-    { id: "activities" as Tab, icon: Activity, label: "Atividades" },
-    { id: "profile" as Tab, icon: User, label: "Perfil" },
+    { id: "home" as Tab, icon: Home, label: t("nav_home", "Início") },
+    { id: "activities" as Tab, icon: Activity, label: t("nav_activities", "Atividades") },
+    { id: "profile" as Tab, icon: User, label: t("nav_profile", "Perfil") },
   ];
 
   return (

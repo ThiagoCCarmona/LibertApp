@@ -7,6 +7,7 @@ import { ChatbotModal } from "./ChatbotModal";
 import { sendNativeMessage } from "../../services/nativeBridge";
 import { apiService, type PostDto } from "../../services/apiService";
 import { DEFAULT_AVATAR_URL } from "../../assets/defaultAvatars";
+import { useTranslation } from "../../i18n";
 
 const LibertLogoSmall = () => (
   <svg width="24" height="24" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -24,6 +25,7 @@ export function HomeNewScreen({
   onShowLeaderboard?: () => void;
   onSearchUsers?: () => void;
 }) {
+  const { t } = useTranslation();
   const [posts, setPosts] = useState<PostDto[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -410,10 +412,10 @@ export function HomeNewScreen({
         {/* Feed Header */}
         <div className="px-6 pt-2 pb-3 flex items-center justify-between">
           <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 18, color: "#2D3A2E" }}>
-            Feed da Comunidade
+            {t("feed_title")}
           </h2>
           <span style={{ fontSize: 12, color: "#7A8A7B" }}>
-            {posts.length} {posts.length === 1 ? "publicação" : "publicações"}
+            {posts.length} {posts.length === 1 ? "post" : "posts"}
           </span>
         </div>
 
@@ -460,10 +462,10 @@ export function HomeNewScreen({
                   margin: 0,
                 }}
               >
-                O mural da feira está aberto!
+                {t("feed_tagline")}
               </h3>
               <p style={{ fontSize: 13, color: "#7A8A7B", lineHeight: 1.5, margin: 0, maxWidth: 280 }}>
-                Nenhuma publicação ainda. Seja o primeiro a compartilhar uma conquista, foto ou momento de desconexão!
+                {t("feed_no_posts")}
               </p>
               <button
                 onClick={() => setIsNewPostOpen(true)}
@@ -484,7 +486,7 @@ export function HomeNewScreen({
                 }}
               >
                 <Plus size={16} />
-                Publicar Agora
+                {t("feed_publish")}
               </button>
             </div>
           ) : (

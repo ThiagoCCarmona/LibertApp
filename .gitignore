@@ -9,4 +9,5 @@ obj/
 *.db
 *.db-shm
 *.db-wal
+*.apk
 

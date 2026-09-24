@@ -4,6 +4,7 @@ import { sendNativeMessage } from "../../services/nativeBridge";
 import { apiService } from "../../services/apiService";
 import { PomodoroSettingsModal, type PomodoroConfig } from "./PomodoroSettingsModal";
 import { MetaModal, type MetaItem } from "./MetaModal";
+import { useTranslation } from "../../i18n";
 
 type PomodoroMode = "focus" | "short-break" | "long-break";
 type ChallengeTab = "daily" | "weekly" | "monthly";
@@ -42,6 +43,7 @@ const DEFAULT_POMODORO_CONFIG: PomodoroConfig = {
 };
 
 export function ActivitiesScreen() {
+  const { t } = useTranslation();
   // Configuração do Pomodoro
   const [pomodoroConfig, setPomodoroConfig] = React.useState<PomodoroConfig>(() => {
     try {
@@ -345,7 +347,7 @@ export function ActivitiesScreen() {
         <div className="px-6 pt-4 pb-3 flex items-center justify-between">
           <div>
             <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 22, color: "#2D3A2E", margin: 0 }}>
-              Pomodoro
+              {t("act_title")}
             </h1>
             <p style={{ fontSize: 13, color: "#7A8A7B", marginTop: 2 }}>Tempo de Foco & Hábitos Conscientes</p>
           </div>
@@ -630,9 +632,9 @@ export function ActivitiesScreen() {
                   transition: "all 0.2s",
                 }}
               >
-                {tab === 'daily' && 'Diárias'}
-                {tab === 'weekly' && 'Semanais'}
-                {tab === 'monthly' && 'Mensais'}
+                {tab === 'daily' && t("act_daily_challenges")}
+                {tab === 'weekly' && t("act_weekly_challenges")}
+                {tab === 'monthly' && t("act_monthly_challenges")}
               </button>
             ))}
           </div>
