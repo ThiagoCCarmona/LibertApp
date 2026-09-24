@@ -40,7 +40,22 @@ if (typeof window !== 'undefined') {
  * de carregar, mesmo consumindo o site de producao (nao um bundle local empacotado).
  */
 export function isMauiHybrid(): boolean {
-  return typeof window !== 'undefined' && !!(window as any).__LIBERTAPP_NATIVE_BRIDGE;
+  if (typeof window === 'undefined') return false;
+  if ((window as any).__LIBERTAPP_NATIVE_BRIDGE) return true;
+  if (window.location.search.includes('platform=mobile') || window.location.search.includes('source=apk')) {
+    (window as any).__LIBERTAPP_NATIVE_BRIDGE = true;
+    try { localStorage.setItem('is_apk_wrapper', 'true'); } catch {}
+    return true;
+  }
+  try {
+    if (localStorage.getItem('is_apk_wrapper') === 'true') return true;
+  } catch {}
+  if (/wv|LibertAppMobile/i.test(navigator.userAgent)) {
+    (window as any).__LIBERTAPP_NATIVE_BRIDGE = true;
+    try { localStorage.setItem('is_apk_wrapper', 'true'); } catch {}
+    return true;
+  }
+  return false;
 }
 
 // Fallback de desenvolvimento e execução no navegador comum (Web / Vite)

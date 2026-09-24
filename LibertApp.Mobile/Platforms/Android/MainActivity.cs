@@ -11,7 +11,14 @@ public class MainActivity : MauiAppCompatActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        LibertApp.Mobile.Platforms.Android.BackgroundNotificationManager.ScheduleAll(this);
+        try
+        {
+            LibertApp.Mobile.Platforms.Android.BackgroundNotificationManager.ScheduleAll(this);
+        }
+        catch (Exception ex)
+        {
+            Android.Util.Log.Error("LibertApp", "Error in ScheduleAll: " + ex.Message);
+        }
     }
 
     protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)

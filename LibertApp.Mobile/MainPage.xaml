@@ -13,7 +13,7 @@
             preservada via esquema de URL customizado interceptado em OnNavigating.
         -->
         <WebView x:Name="webView"
-                 Source="https://libertapp.tccodes.com.br"
+                 Source="https://libertapp.tccodes.com.br?platform=mobile"
                  Navigating="OnNavigating"
                  Navigated="OnNavigated"
                  HorizontalOptions="Fill"

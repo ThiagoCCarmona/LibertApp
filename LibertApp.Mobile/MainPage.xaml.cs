@@ -72,6 +72,7 @@ public partial class MainPage : ContentPage
 
         const string injectScript = @"
             window.__LIBERTAPP_NATIVE_BRIDGE = true;
+            try { localStorage.setItem('is_apk_wrapper', 'true'); } catch {}
             window.__LIBERTAPP_NATIVE_BRIDGE_SEND = function(json) {
                 window.location.href = 'libertappbridge://send?payload=' + encodeURIComponent(json);
             };

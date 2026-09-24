@@ -67,15 +67,7 @@ public static class BackgroundNotificationManager
         );
 
         long triggerAtMillis = Java.Lang.JavaSystem.CurrentTimeMillis() + (intervalMinutes * 60 * 1000L);
-
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.M)
-        {
-            alarmManager.SetExactAndAllowWhileIdle(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
-        }
-        else
-        {
-            alarmManager.Set(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
-        }
+        SafeSetAlarm(alarmManager, triggerAtMillis, pendingIntent);
     }
 
     public static void CancelBreathing(Context context)
@@ -113,14 +105,40 @@ public static class BackgroundNotificationManager
         );
 
         long triggerAtMillis = Java.Lang.JavaSystem.CurrentTimeMillis() + delayMillis;
+        SafeSetAlarm(alarmManager, triggerAtMillis, pendingIntent);
+    }
 
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.M)
+    private static void SafeSetAlarm(AlarmManager alarmManager, long triggerAtMillis, PendingIntent pendingIntent)
+    {
+        try
         {
-            alarmManager.SetExactAndAllowWhileIdle(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
+            {
+                if (alarmManager.CanScheduleExactAlarms())
+                {
+                    alarmManager.SetExactAndAllowWhileIdle(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
+                }
+                else
+                {
+                    alarmManager.SetAndAllowWhileIdle(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
+                }
+            }
+            else if (Build.VERSION.SdkInt >= BuildVersionCodes.M)
+            {
+                alarmManager.SetExactAndAllowWhileIdle(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
+            }
+            else
+            {
+                alarmManager.Set(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
+            }
         }
-        else
+        catch
         {
-            alarmManager.Set(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
+            try
+            {
+                alarmManager.Set(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
+            }
+            catch { }
         }
     }
 

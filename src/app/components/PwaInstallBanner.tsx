@@ -6,7 +6,9 @@ import { useTranslation } from "../../i18n";
 export function PwaInstallBanner() {
   const { t } = useTranslation();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(() => {
+    return isMauiHybrid();
+  });
   const [isIos, setIsIos] = useState(false);
   const [showIosModal, setShowIosModal] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
@@ -14,18 +16,25 @@ export function PwaInstallBanner() {
   });
 
   useEffect(() => {
-    // Se estiver rodando dentro do MAUI Android, não precisa do banner PWA
+    // Se estiver rodando dentro do MAUI Android/APK, não precisa do banner PWA
     if (isMauiHybrid()) {
       setIsStandalone(true);
       return;
     }
+
+    const handleNativeReady = () => {
+      setIsStandalone(true);
+    };
+    window.addEventListener("libertapp-native-ready", handleNativeReady);
 
     // Checa se já está instalado como PWA (standalone)
     const checkStandalone = () => {
       const isStandaloneMode =
         window.matchMedia("(display-mode: standalone)").matches ||
         (window.navigator as any).standalone === true;
-      setIsStandalone(isStandaloneMode);
+      if (isStandaloneMode) {
+        setIsStandalone(true);
+      }
     };
     checkStandalone();
 
@@ -48,6 +57,7 @@ export function PwaInstallBanner() {
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("libertapp-native-ready", handleNativeReady);
     };
   }, []);
 

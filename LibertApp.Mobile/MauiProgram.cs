@@ -44,6 +44,11 @@ public static class MauiProgram
 			handler.PlatformView.Settings.AllowFileAccess = true;
 			try
 			{
+				handler.PlatformView.Settings.UserAgentString = (handler.PlatformView.Settings.UserAgentString ?? "") + " LibertAppMobile/1.0";
+			}
+			catch { }
+			try
+			{
 				global::Android.Webkit.CookieManager.Instance.SetAcceptCookie(true);
 				global::Android.Webkit.CookieManager.Instance.SetAcceptThirdPartyCookies(handler.PlatformView, true);
 			}
